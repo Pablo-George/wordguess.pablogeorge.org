@@ -58,6 +58,7 @@ router.get('/games', ensureAuth, (req, res) => {
       FROM pokemon_games pg
       JOIN users u ON u.id = pg.created_by
       WHERE pg.status = 'waiting' AND pg.created_by IN (${ph})
+        AND pg.created_at > datetime('now', '-1 hour')
         AND pg.id NOT IN (SELECT game_id FROM pokemon_game_players WHERE user_id = ?)
       ORDER BY pg.created_at DESC
     `).all(...friendIds, userId);
@@ -69,6 +70,7 @@ router.get('/games', ensureAuth, (req, res) => {
       FROM knockout_games kg
       JOIN users u ON u.id = kg.created_by
       WHERE kg.status = 'waiting' AND kg.created_by IN (${ph})
+        AND kg.created_at > datetime('now', '-1 hour')
         AND kg.id NOT IN (SELECT game_id FROM knockout_players WHERE user_id = ?)
       ORDER BY kg.created_at DESC
     `).all(...friendIds, userId);
@@ -80,6 +82,7 @@ router.get('/games', ensureAuth, (req, res) => {
       FROM animequote_games ag
       JOIN users u ON u.id = ag.created_by
       WHERE ag.status = 'waiting' AND ag.created_by IN (${ph})
+        AND ag.created_at > datetime('now', '-1 hour')
         AND ag.id NOT IN (SELECT game_id FROM animequote_players WHERE user_id = ?)
       ORDER BY ag.created_at DESC
     `).all(...friendIds, userId);
@@ -238,6 +241,18 @@ router.post('/games/pokemon/:id/guess', ensureAuth, (req, res) => {
     gameCompleted,
     answer: (solved || outOfGuesses || gameCompleted) ? game.pokemon_name : null,
   });
+});
+
+// POST /games/pokemon/:id/cancel
+router.post('/games/pokemon/:id/cancel', ensureAuth, (req, res) => {
+  const db = getDb();
+  const game = db.prepare('SELECT * FROM pokemon_games WHERE id = ?').get(req.params.id);
+  if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
+    return res.redirect('/games');
+  }
+  db.prepare('DELETE FROM pokemon_game_players WHERE game_id = ?').run(game.id);
+  db.prepare('DELETE FROM pokemon_games WHERE id = ?').run(game.id);
+  res.redirect('/games');
 });
 
 module.exports = router;

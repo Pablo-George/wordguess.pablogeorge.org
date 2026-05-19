@@ -196,4 +196,15 @@ router.post('/games/animequotes/:id/guess', ensureAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/games/animequotes/:id/cancel', ensureAuth, (req, res) => {
+  const db = getDb();
+  const game = db.prepare('SELECT * FROM animequote_games WHERE id = ?').get(req.params.id);
+  if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
+    return res.redirect('/games');
+  }
+  db.prepare('DELETE FROM animequote_players WHERE game_id = ?').run(game.id);
+  db.prepare('DELETE FROM animequote_games WHERE id = ?').run(game.id);
+  res.redirect('/games');
+});
+
 module.exports = router;

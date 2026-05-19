@@ -28,9 +28,14 @@
         <p class="text-sm" style="margin-bottom:0.75rem">
           With <%= players.length %> player<%= players.length !== 1 ? 's' : '' %>, the name will be <strong><%= previewLength %> letters</strong>. More players = longer name.
         </p>
-        <form action="/games/pokemon/<%= game.id %>/start" method="POST">
-          <button type="submit" class="btn btn-primary">Start Game</button>
-        </form>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <form action="/games/pokemon/<%= game.id %>/start" method="POST">
+            <button type="submit" class="btn btn-primary">Start Game</button>
+          </form>
+          <form action="/games/pokemon/<%= game.id %>/cancel" method="POST">
+            <button type="submit" class="btn btn-danger">Close Lobby</button>
+          </form>
+        </div>
       <% } else { %>
         <p class="text-sm">Waiting for the host to start...</p>
       <% } %>

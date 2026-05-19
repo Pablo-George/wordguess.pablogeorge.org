@@ -27,13 +27,18 @@
           <button type="submit" class="btn btn-primary">Join Game</button>
         </form>
       <% } else if (user.id === game.created_by) { %>
-        <% if (players.length >= 2) { %>
-          <form action="/games/knockout/<%= game.id %>/start" method="POST">
-            <button type="submit" class="btn btn-primary">Start Game</button>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+          <% if (players.length >= 2) { %>
+            <form action="/games/knockout/<%= game.id %>/start" method="POST">
+              <button type="submit" class="btn btn-primary">Start Game</button>
+            </form>
+          <% } else { %>
+            <p class="text-sm" style="color:var(--text-dim)">Need at least 2 players to start.</p>
+          <% } %>
+          <form action="/games/knockout/<%= game.id %>/cancel" method="POST">
+            <button type="submit" class="btn btn-danger">Close Lobby</button>
           </form>
-        <% } else { %>
-          <p class="text-sm" style="color:var(--text-dim)">Need at least 2 players to start.</p>
-        <% } %>
+        </div>
       <% } else { %>
         <p class="text-sm">Waiting for the host to start...</p>
       <% } %>

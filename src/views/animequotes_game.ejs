@@ -31,9 +31,14 @@
           <%= players.length %> player<%= players.length !== 1 ? 's' : '' %> →
           quote will be ~<%= [8,10,12,14,16,18,20][Math.min(players.length-1,6)] %> words
         </p>
-        <form action="/games/animequotes/<%= game.id %>/start" method="POST" id="start-form">
-          <button type="submit" class="btn btn-primary" id="start-btn">Generate &amp; Start</button>
-        </form>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <form action="/games/animequotes/<%= game.id %>/start" method="POST" id="start-form">
+            <button type="submit" class="btn btn-primary" id="start-btn">Generate &amp; Start</button>
+          </form>
+          <form action="/games/animequotes/<%= game.id %>/cancel" method="POST">
+            <button type="submit" class="btn btn-danger">Close Lobby</button>
+          </form>
+        </div>
         <script>
           document.getElementById('start-form').addEventListener('submit', function() {
             document.getElementById('start-btn').textContent = 'Generating quote…';
