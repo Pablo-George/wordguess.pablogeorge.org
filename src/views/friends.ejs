@@ -89,6 +89,7 @@
 <script>
   var knownIncoming = <%= incoming.length %>;
   setInterval(function() {
+    if (document.hidden) return;
     fetch('/friends/poll')
       .then(function(r) { return r.json(); })
       .then(function(d) { if (d.incoming !== knownIncoming) window.location.reload(); })
