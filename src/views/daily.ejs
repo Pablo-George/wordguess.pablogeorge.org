@@ -40,4 +40,27 @@
     <div id="error-msg" class="error-msg"></div>
   <% } %>
 </div>
+
+<% if (leaderboard && leaderboard.length > 0) { %>
+<section class="dash-section" style="margin-top:2rem;text-align:left">
+  <h2>Friends Today</h2>
+  <div class="player-status-list">
+    <% leaderboard.forEach(function(p, i) { %>
+      <div class="player-status-item <%= p.solved ? 'solved' : (p.guesses_count >= 6 ? 'failed' : '') %>">
+        <span class="stat-rank">#<%= i + 1 %></span>
+        <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+        <span style="flex:1"><%= p.display_name %><% if (p.id === user.id) { %> <span class="text-sm">(you)</span><% } %></span>
+        <% if (p.solved) { %>
+          <span class="badge winner"><%= p.guesses_count %>/<%= 6 %></span>
+        <% } else if (p.guesses_count >= 6) { %>
+          <span class="badge dead">Failed</span>
+        <% } else { %>
+          <span class="text-sm">In progress</span>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
 <%- include('footer') %>

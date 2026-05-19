@@ -27,6 +27,97 @@
     });
   }
 
+  // Classic guesses
+  var classicForm = document.getElementById('classic-guess-form');
+  if (classicForm) {
+    var classicSubmitting = false;
+    classicForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (classicSubmitting) return;
+      var input = document.getElementById('classic-guess-input');
+      var guess = input.value.trim().toUpperCase().replace(/[^A-Z]/g, '');
+      if (guess.length !== 5) return;
+      var errorEl = document.getElementById('classic-error');
+      var btn = classicForm.querySelector('button[type=submit]');
+
+      classicSubmitting = true;
+      btn.disabled = true;
+      errorEl.textContent = '';
+
+      fetch('/classic/guess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guess: guess })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) {
+          errorEl.textContent = data.error;
+          classicSubmitting = false;
+          btn.disabled = false;
+          input.focus();
+          return;
+        }
+
+        var board = document.getElementById('classic-board');
+        var emptyRow = board.querySelector('.row:not([data-filled])');
+        if (emptyRow) {
+          emptyRow.setAttribute('data-filled', '1');
+          var tiles = emptyRow.querySelectorAll('.tile');
+          data.result.forEach(function(r, i) {
+            setTimeout(function() {
+              tiles[i].classList.add('tile-flip');
+              setTimeout(function() {
+                tiles[i].className = 'tile tile-' + r.status;
+                tiles[i].textContent = r.letter;
+              }, 175);
+            }, i * 80);
+          });
+        }
+
+        input.value = '';
+        var totalDelay = data.result.length * 80 + 175;
+
+        setTimeout(function() {
+          if (data.solved || data.outOfGuesses) {
+            classicForm.style.display = 'none';
+            document.querySelector('.classic-actions').style.display = 'none';
+
+            var msg = document.createElement('div');
+            msg.id = 'classic-result';
+            msg.className = data.solved ? 'result-message win' : 'result-message fail';
+            msg.innerHTML = data.solved
+              ? 'Solved in ' + data.guessNumber + ' guess' + (data.guessNumber !== 1 ? 'es' : '') + '! +' + data.score + ' pts'
+              : 'The word was <strong>' + data.answer + '</strong>';
+            classicForm.parentNode.insertBefore(msg, classicForm);
+
+            var actions = document.createElement('div');
+            actions.className = 'classic-actions';
+            actions.innerHTML = '<form action="/classic/new" method="POST"><button type="submit" class="btn btn-primary">' + (data.solved ? 'New Game' : 'Try Again') + '</button></form>';
+            classicForm.parentNode.insertBefore(actions, classicForm);
+
+            if (data.stats) {
+              var statEls = document.querySelectorAll('.stat-value');
+              if (statEls[0]) statEls[0].textContent = data.stats.total;
+              if (statEls[1]) statEls[1].textContent = data.stats.winRate + '%';
+              if (statEls[2]) statEls[2].textContent = data.stats.streak;
+              if (statEls[3]) statEls[3].textContent = data.stats.bestStreak;
+            }
+          } else {
+            classicSubmitting = false;
+            btn.disabled = false;
+            input.focus();
+          }
+        }, totalDelay);
+      })
+      .catch(function() {
+        errorEl.textContent = 'Error submitting guess';
+        classicSubmitting = false;
+        btn.disabled = false;
+      });
+    });
+  }
+
   // Battle guesses
   var battleForm = document.getElementById('battle-guess-form');
   if (battleForm) {

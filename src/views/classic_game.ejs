@@ -1,0 +1,75 @@
+<%- include('header') %>
+<div class="classic-page daily-page">
+
+  <h1>Classic</h1>
+
+  <div class="classic-stats">
+    <div class="stat-item">
+      <span class="stat-value"><%= stats.total %></span>
+      <span class="stat-label">Played</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value"><%= stats.winRate %>%</span>
+      <span class="stat-label">Win Rate</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value"><%= stats.streak %></span>
+      <span class="stat-label">Streak</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value"><%= stats.bestStreak %></span>
+      <span class="stat-label">Best</span>
+    </div>
+  </div>
+
+  <div class="board" id="classic-board" style="--wl:5">
+    <% guesses.forEach(function(g) { %>
+      <div class="row" data-filled="1">
+        <% g.result.forEach(function(r) { %>
+          <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
+        <% }) %>
+      </div>
+    <% }) %>
+    <% if (game.status === 'active') { %>
+      <% for (var i = guesses.length; i < maxGuesses; i++) { %>
+        <div class="row">
+          <% for (var j = 0; j < 5; j++) { %><div class="tile tile-empty"></div><% } %>
+        </div>
+      <% } %>
+    <% } %>
+  </div>
+
+  <% if (game.status === 'won') { %>
+    <div class="result-message win" id="classic-result">
+      Solved in <%= guesses.length %> guess<%= guesses.length !== 1 ? 'es' : '' %>! +<%= game.score %> pts
+    </div>
+    <div class="classic-actions">
+      <form action="/classic/new" method="POST">
+        <button type="submit" class="btn btn-primary">New Game</button>
+      </form>
+    </div>
+  <% } else if (game.status === 'lost') { %>
+    <div class="result-message fail" id="classic-result">
+      The word was <strong><%= answer %></strong>
+    </div>
+    <div class="classic-actions">
+      <form action="/classic/new" method="POST">
+        <button type="submit" class="btn btn-primary">Try Again</button>
+      </form>
+    </div>
+  <% } else { %>
+    <form id="classic-guess-form" class="guess-form">
+      <input type="text" id="classic-guess-input" maxlength="5"
+        autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" autofocus>
+      <button type="submit" class="btn btn-primary">Guess</button>
+    </form>
+    <div id="classic-error" class="error-msg"></div>
+    <div class="classic-actions" style="margin-top:1rem">
+      <form action="/classic/new" method="POST">
+        <button type="submit" class="btn">Give Up</button>
+      </form>
+    </div>
+  <% } %>
+
+</div>
+<%- include('footer') %>

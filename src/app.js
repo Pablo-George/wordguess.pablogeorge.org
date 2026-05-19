@@ -86,6 +86,7 @@ app.use(loadUser);
 // Routes
 const authRoutes = require('./routes/auth');
 const dailyRoutes = require('./routes/daily');
+const classicRoutes = require('./routes/classic');
 const friendRoutes = require('./routes/friends');
 const gamesRoutes = require('./routes/games');
 const knockoutRoutes = require('./routes/knockout');
@@ -95,6 +96,7 @@ const royaleRoutes = require('./routes/royale');
 
 app.use(authRoutes);
 app.use(dailyRoutes);
+app.use(classicRoutes);
 app.use(friendRoutes);
 app.use(gamesRoutes);
 app.use(knockoutRoutes);

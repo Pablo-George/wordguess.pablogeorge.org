@@ -28,6 +28,21 @@ router.get('/daily', ensureAuth, (req, res) => {
     result: JSON.parse(g.result_json),
   }));
 
+  const friendIds = db.prepare(`
+    SELECT CASE WHEN user_id = ? THEN friend_id ELSE user_id END as id
+    FROM friends WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'
+  `).all(req.user.id, req.user.id, req.user.id).map(r => r.id);
+
+  const leaderboardIds = [req.user.id, ...friendIds];
+  const placeholders = leaderboardIds.map(() => '?').join(',');
+  const leaderboard = db.prepare(`
+    SELECT u.id, u.display_name, u.avatar_url, da.guesses_count, da.solved, da.score
+    FROM daily_attempts da
+    JOIN users u ON u.id = da.user_id
+    WHERE da.puzzle_date = ? AND da.user_id IN (${placeholders})
+    ORDER BY da.solved DESC, da.guesses_count ASC, da.created_at ASC
+  `).all(puzzleDate, ...leaderboardIds);
+
   res.render('daily', {
     wordLength: word.word_length,
     maxGuesses: 6,
@@ -36,6 +51,7 @@ router.get('/daily', ensureAuth, (req, res) => {
     solved: attempt ? attempt.solved : false,
     puzzleDate,
     answer: word.word,
+    leaderboard,
   });
 });
 
