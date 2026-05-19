@@ -106,12 +106,21 @@
   // Pokemon game guesses
   var pokemonForm = document.getElementById('pokemon-guess-form');
   if (pokemonForm) {
+    var pokemonSubmitting = false;
     pokemonForm.addEventListener('submit', function(e) {
       e.preventDefault();
+      if (pokemonSubmitting) return;
       var input = document.getElementById('pokemon-guess-input');
       var guess = input.value.trim().toUpperCase().replace(/[^A-Z]/g, '');
       if (!guess.length) return;
       var gameId = pokemonForm.getAttribute('data-game-id');
+      var errorEl = document.getElementById('pokemon-error');
+      var btn = pokemonForm.querySelector('button[type=submit]');
+
+      pokemonSubmitting = true;
+      btn.disabled = true;
+      errorEl.textContent = '';
+
       fetch('/games/pokemon/' + gameId + '/guess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -120,13 +129,97 @@
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.error) {
-          document.getElementById('pokemon-error').textContent = data.error;
+          errorEl.textContent = data.error;
+          pokemonSubmitting = false;
+          btn.disabled = false;
+          input.focus();
           return;
         }
-        window.location.reload();
+
+        // Fill the next empty row with the result tiles
+        var board = document.getElementById('pokemon-board');
+        var emptyRow = board.querySelector('.row:not([data-filled])');
+        if (emptyRow) {
+          emptyRow.setAttribute('data-filled', '1');
+          var tiles = emptyRow.querySelectorAll('.tile');
+          data.result.forEach(function(r, i) {
+            var delay = i * 80;
+            setTimeout(function() {
+              var tile = tiles[i];
+              tile.classList.add('tile-flip');
+              setTimeout(function() {
+                tile.className = 'tile tile-' + r.status;
+                tile.textContent = r.letter;
+              }, 175);
+            }, delay);
+          });
+        }
+
+        input.value = '';
+
+        var totalDelay = data.result.length * 80 + 175;
+        setTimeout(function() {
+          if (data.solved) {
+            pokemonForm.style.display = 'none';
+            var msg = document.createElement('div');
+            msg.className = 'result-message win';
+            msg.textContent = 'You got it in ' + data.guessCount + ' guess' + (data.guessCount !== 1 ? 'es' : '') + '! +' + data.score + ' pts';
+            pokemonForm.parentNode.insertBefore(msg, pokemonForm);
+          } else if (data.outOfGuesses) {
+            pokemonForm.style.display = 'none';
+            var msg = document.createElement('div');
+            msg.className = 'result-message fail';
+            msg.innerHTML = 'Out of guesses! The Pokémon was <strong>' + data.answer + '</strong>';
+            pokemonForm.parentNode.insertBefore(msg, pokemonForm);
+          } else if (data.gameCompleted) {
+            pokemonForm.style.display = 'none';
+            var msg = document.createElement('div');
+            msg.className = 'result-message fail';
+            msg.innerHTML = 'Game over! The Pokémon was <strong>' + data.answer + '</strong>';
+            pokemonForm.parentNode.insertBefore(msg, pokemonForm);
+          } else {
+            pokemonSubmitting = false;
+            btn.disabled = false;
+            input.focus();
+          }
+        }, totalDelay);
       })
-      .catch(function() { document.getElementById('pokemon-error').textContent = 'Error'; });
+      .catch(function() {
+        errorEl.textContent = 'Error submitting guess';
+        pokemonSubmitting = false;
+        btn.disabled = false;
+      });
     });
+
+    // Poll player status every 6s without full page reload
+    var gameId = pokemonForm.getAttribute('data-game-id');
+    function pollPlayers() {
+      fetch('/games/pokemon/' + gameId + '/players')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.status === 'completed') { window.location.reload(); return; }
+          var list = document.querySelector('.player-status-list');
+          if (!list || !data.players) return;
+          data.players.forEach(function(p) {
+            var item = list.querySelector('[data-user-id="' + p.user_id + '"]');
+            if (!item) return;
+            var maxGuesses = parseInt(list.getAttribute('data-max-guesses'), 10);
+            if (p.solved) {
+              item.className = 'player-status-item solved';
+              var badge = item.querySelector('.status-badge');
+              if (badge) badge.textContent = p.guesses_count + ' guess' + (p.guesses_count !== 1 ? 'es' : '');
+            } else if (p.guesses_count >= maxGuesses) {
+              item.className = 'player-status-item failed';
+            } else {
+              var counter = item.querySelector('.guess-counter');
+              if (counter) counter.textContent = p.guesses_count + '/' + maxGuesses;
+            }
+          });
+        })
+        .catch(function() {});
+    }
+    var pollInterval = setInterval(pollPlayers, 6000);
+    window.addEventListener('beforeunload', function() { clearInterval(pollInterval); });
   }
 
   // Royale guesses

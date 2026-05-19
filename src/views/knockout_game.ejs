@@ -71,7 +71,7 @@
     <% if (myGuesses.length > 0 || (!myDone && !isEliminated)) { %>
       <div class="board" id="knockout-board">
         <% myGuesses.forEach(function(g) { %>
-          <div class="row">
+          <div class="row" data-filled="1">
             <% g.result.forEach(function(r) { %>
               <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
             <% }) %>

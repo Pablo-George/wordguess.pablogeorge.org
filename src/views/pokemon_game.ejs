@@ -42,7 +42,7 @@
 
     <div class="board pokemon-board" id="pokemon-board" data-length="<%= wordLength %>">
       <% myGuesses.forEach(function(g) { %>
-        <div class="row">
+        <div class="row" data-filled="1">
           <% g.result.forEach(function(r) { %>
             <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
           <% }) %>
@@ -82,18 +82,18 @@
 
     <section class="dash-section" style="margin-top:2rem">
       <h2>Players</h2>
-      <div class="player-status-list">
+      <div class="player-status-list" data-max-guesses="<%= maxGuesses %>">
         <% players.forEach(function(p) { %>
-          <div class="player-status-item <%= p.solved ? 'solved' : (p.guesses_count >= maxGuesses ? 'failed' : '') %>">
+          <div class="player-status-item <%= p.solved ? 'solved' : (p.guesses_count >= maxGuesses ? 'failed' : '') %>" data-user-id="<%= p.user_id %>">
             <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
             <span style="flex:1"><%= p.display_name %></span>
             <% if (p.solved) { %>
-              <span class="badge winner"><%= p.guesses_count %> guess<%= p.guesses_count !== 1 ? 'es' : '' %></span>
+              <span class="badge winner status-badge"><%= p.guesses_count %> guess<%= p.guesses_count !== 1 ? 'es' : '' %></span>
               <span class="badge" style="background:transparent;color:var(--accent)">+<%= p.score %>pts</span>
             <% } else if (p.guesses_count >= maxGuesses) { %>
               <span class="badge dead">Out</span>
             <% } else { %>
-              <span class="text-sm"><%= p.guesses_count %>/<%= maxGuesses %></span>
+              <span class="text-sm guess-counter"><%= p.guesses_count %>/<%= maxGuesses %></span>
             <% } %>
           </div>
         <% }) %>
@@ -114,9 +114,6 @@
 
 <% if (game.status === 'waiting' && myPlayer) { %>
 <script>setTimeout(function() { window.location.reload(); }, 4000);</script>
-<% } %>
-<% if (game.status === 'active' && !solved && !outOfGuesses) { %>
-<script>setTimeout(function() { window.location.reload(); }, 8000);</script>
 <% } %>
 
 <%- include('footer') %>

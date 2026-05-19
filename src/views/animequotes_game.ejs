@@ -94,7 +94,7 @@
 
         <div class="board" id="aq-board">
           <% activeGuesses.forEach(function(g) { %>
-            <div class="row">
+            <div class="row" data-filled="1">
               <% g.result.forEach(function(r) { %>
                 <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
               <% }) %>
@@ -150,9 +150,6 @@
       </div>
     </section>
 
-    <% if (game.status === 'active') { %>
-      <script>setTimeout(function() { window.location.reload(); }, 8000);</script>
-    <% } %>
 
   <% } %>
 

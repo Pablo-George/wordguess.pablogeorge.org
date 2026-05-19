@@ -5,7 +5,7 @@ async function generateAnimeQuote(animeName, targetWordCount) {
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const prompt = `Generate a memorable, meaningful quote from the anime "${animeName}".
 The quote should be approximately ${targetWordCount} words long.

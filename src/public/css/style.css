@@ -401,6 +401,7 @@ code {
 .row:nth-child(4) { animation-delay: 0.18s; }
 .row:nth-child(5) { animation-delay: 0.24s; }
 .row:nth-child(6) { animation-delay: 0.30s; }
+.row[data-filled]  { animation: none; }
 
 .tile {
   width: 58px;
@@ -436,6 +437,16 @@ code {
   background: var(--gray);
   border-color: var(--gray);
   color: var(--text-mid);
+}
+
+@keyframes tileFlip {
+  0%   { transform: scaleY(1); }
+  50%  { transform: scaleY(0); }
+  100% { transform: scaleY(1); }
+}
+
+.tile-flip {
+  animation: tileFlip 0.35s ease forwards;
 }
 
 .guess-form {

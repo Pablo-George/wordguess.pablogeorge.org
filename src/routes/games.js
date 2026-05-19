@@ -131,6 +131,21 @@ router.post('/games/pokemon/:id/start', ensureAuth, (req, res) => {
   res.redirect('/games/pokemon/' + game.id);
 });
 
+// GET /games/pokemon/:id/players — lightweight status poll
+router.get('/games/pokemon/:id/players', ensureAuth, (req, res) => {
+  const db = getDb();
+  const game = db.prepare('SELECT status FROM pokemon_games WHERE id = ?').get(req.params.id);
+  if (!game) return res.json({ error: 'Not found' });
+  const players = db.prepare(`
+    SELECT pgp.user_id, u.display_name, pgp.solved, pgp.guesses_count, pgp.score, u.avatar_url
+    FROM pokemon_game_players pgp
+    JOIN users u ON u.id = pgp.user_id
+    WHERE pgp.game_id = ?
+    ORDER BY pgp.score DESC, pgp.guesses_count ASC
+  `).all(game.id);
+  res.json({ status: game.status, players });
+});
+
 // POST /games/pokemon/:id/guess
 router.post('/games/pokemon/:id/guess', ensureAuth, (req, res) => {
   const db = getDb();
@@ -159,11 +174,22 @@ router.post('/games/pokemon/:id/guess', ensureAuth, (req, res) => {
     WHERE game_id = ? AND solved = 0 AND guesses_count < ?
   `).get(game.id, game.max_guesses);
 
-  if (remaining === 0) {
+  const gameCompleted = remaining === 0;
+  if (gameCompleted) {
     db.prepare("UPDATE pokemon_games SET status = 'completed' WHERE id = ?").run(game.id);
   }
 
-  res.json({ ok: true });
+  const outOfGuesses = !solved && newCount >= game.max_guesses;
+  res.json({
+    ok: true,
+    result,
+    solved,
+    score,
+    guessCount: newCount,
+    outOfGuesses,
+    gameCompleted,
+    answer: (solved || outOfGuesses || gameCompleted) ? game.pokemon_name : null,
+  });
 });
 
 module.exports = router;
