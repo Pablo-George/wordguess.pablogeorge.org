@@ -40,7 +40,7 @@
   <% if (game.status === 'active' || game.status === 'completed') { %>
     <p class="puzzle-date"><%= wordLength %> letters • Gen 1 Pokémon</p>
 
-    <div class="board pokemon-board" id="pokemon-board" data-length="<%= wordLength %>">
+    <div class="board pokemon-board" id="pokemon-board" data-length="<%= wordLength %>" style="--wl:<%= wordLength %>">
       <% myGuesses.forEach(function(g) { %>
         <div class="row" data-filled="1">
           <% g.result.forEach(function(r) { %>

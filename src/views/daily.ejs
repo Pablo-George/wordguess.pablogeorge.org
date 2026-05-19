@@ -3,10 +3,10 @@
   <h1>Daily WordGuess</h1>
   <p class="puzzle-date"><%= puzzleDate %></p>
 
-  <div class="board" id="board" data-max-guesses="<%= maxGuesses %>" data-word-length="<%= wordLength %>">
+  <div class="board" id="board" data-max-guesses="<%= maxGuesses %>" data-word-length="<%= wordLength %>" style="--wl:<%= wordLength %>">
     <% if (guesses.length > 0) { %>
       <% guesses.forEach(function(g) { %>
-        <div class="row">
+        <div class="row" data-filled="1">
           <% g.result.forEach(function(r) { %>
             <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
           <% }) %>

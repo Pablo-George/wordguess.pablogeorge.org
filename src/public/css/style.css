@@ -378,9 +378,11 @@ code {
 }
 
 .board {
+  --wl: 5;
+  --tg: 6px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--tg);
   align-items: center;
   margin: 1.5rem auto 2rem;
 }
@@ -392,7 +394,7 @@ code {
 
 .row {
   display: flex;
-  gap: 6px;
+  gap: var(--tg, 6px);
   animation: rowIn 0.3s ease both;
 }
 .row:nth-child(1) { animation-delay: 0.00s; }
@@ -458,7 +460,8 @@ code {
 }
 
 .guess-form input {
-  width: 185px;
+  width: 100%;
+  max-width: 220px;
   padding: 0.75rem;
   font-size: 1.4rem;
   text-align: center;
@@ -861,7 +864,8 @@ code {
   display: inline-flex;
   gap: 3px;
   align-items: center;
-  padding: 0.3rem 0.5rem;
+  padding: 0.5rem 0.65rem;
+  min-height: 40px;
   transition: border-color 0.15s;
 }
 .aq-word--unsolved:hover { border-color: var(--text-dim); }
@@ -968,23 +972,18 @@ code {
   margin: 1.5rem auto;
 }
 
-/* Scale tiles for longer names */
-.pokemon-board[data-length="7"] .tile { width: 52px; height: 52px; font-size: 1.7rem; }
-.pokemon-board[data-length="8"] .tile { width: 48px; height: 48px; font-size: 1.55rem; }
-.pokemon-board[data-length="9"] .tile { width: 44px; height: 44px; font-size: 1.4rem; }
-.pokemon-board[data-length="10"] .tile { width: 40px; height: 40px; font-size: 1.25rem; }
-
 .game-code {
   font-family: var(--font-display);
-  font-size: 3.5rem;
+  font-size: clamp(2rem, 10vw, 3.5rem);
   letter-spacing: 0.2em;
   color: var(--accent);
   text-align: center;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1rem;
   background: var(--surface);
   border: 1px dashed var(--border);
   border-radius: 2px;
   margin: 0.5rem 0;
+  word-break: break-all;
 }
 
 .player-status-list { display: grid; gap: 0.4rem; margin: 0.5rem 0; }
@@ -1037,6 +1036,11 @@ code {
 .nav-logout-link { display: none; }
 
 /* ── RESPONSIVE ──────────────────────────────── */
+
+/* Touch targets — apply at all sizes */
+.btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+input, select, textarea { min-height: 44px; }
+
 @media (max-width: 640px) {
 
   /* Navbar */
@@ -1086,46 +1090,50 @@ code {
   /* Grids */
   .dash-grid, .battle-teams { grid-template-columns: 1fr; }
   .group-list { grid-template-columns: 1fr; }
+  .game-mode-grid { grid-template-columns: 1fr; }
 
-  /* Board */
-  .board { gap: 5px; }
-  .row { gap: 5px; }
-  .tile { width: 54px; height: 54px; font-size: 1.7rem; }
+  /* Board — fluid tile sizing based on word length and viewport */
+  .board { --tg: 5px; width: 100%; }
+  .row { gap: var(--tg, 5px); }
+  .tile {
+    --ts: clamp(28px, calc((100vw - 2rem - (var(--wl, 5) - 1) * var(--tg, 5px)) / var(--wl, 5)), 54px);
+    width: var(--ts);
+    height: var(--ts);
+    font-size: calc(var(--ts) * 0.55);
+  }
 
-  /* Guess form — stack vertically, centered */
-  .guess-form { flex-direction: column; align-items: center; gap: 0.75rem; }
-  .guess-form input { width: min(100%, 300px); font-size: 1.2rem; letter-spacing: 0.25em; }
-  .guess-form .btn { width: min(100%, 300px); padding: 0.75rem; }
-
-  /* Touch targets */
-  .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
-  input, select, textarea { min-height: 44px; }
+  /* Guess form — stack vertically on mobile */
+  .guess-form { flex-direction: column; align-items: stretch; gap: 0.75rem; max-width: 320px; margin-left: auto; margin-right: auto; }
+  .guess-form input { max-width: 100%; font-size: 1.3rem; letter-spacing: 0.25em; }
+  .guess-form .btn { width: 100%; padding: 0.85rem; font-size: 0.82rem; }
 
   /* Forms */
   .inline-form { flex-wrap: wrap; }
+  .inline-form input { flex: 1; min-width: 0; }
   .standard-form { max-width: 100%; }
 
   /* Friends */
   .friend-codes { flex-direction: column; gap: 1.5rem; }
   .invite-link-box { flex-direction: column; }
   .invite-link-box input { width: 100%; }
+  .code-display { font-size: 2rem; }
 
   /* Battle tiles */
   .guess-row .tile { width: 40px; height: 40px; font-size: 1.2rem; }
-
-  /* Pokemon board — scale for long names on small screens */
-  .pokemon-board[data-length="7"] .tile  { width: 44px; height: 44px; font-size: 1.4rem; }
-  .pokemon-board[data-length="8"] .tile  { width: 38px; height: 38px; font-size: 1.2rem; }
-  .pokemon-board[data-length="9"] .tile  { width: 34px; height: 34px; font-size: 1.1rem; }
-  .pokemon-board[data-length="10"] .tile { width: 30px; height: 30px; font-size: 0.95rem; }
 
   /* Leaderboard */
   .leaderboard { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
   /* Profile */
   .profile-card { max-width: 100%; }
-}
 
-@media (max-width: 360px) {
-  .tile { width: 50px; height: 50px; font-size: 1.5rem; }
+  /* Anime quote words — bigger tap targets */
+  .aq-quote-layout { gap: 0.4rem; padding: 1rem; }
+  .aq-word { font-size: 0.95rem; }
+  .aq-word--unsolved { min-height: 44px; padding: 0.6rem 0.75rem; }
+  .aq-blank { width: 8px; height: 8px; }
+
+  /* Anime chip grid */
+  .anime-grid { gap: 0.4rem; }
+  .anime-chip { min-height: 40px; }
 }

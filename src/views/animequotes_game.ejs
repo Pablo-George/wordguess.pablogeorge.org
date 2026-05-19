@@ -92,7 +92,7 @@
           &nbsp;·&nbsp; <%= activeGuesses.length %>/<%= maxGuesses %> guesses used
         </h2>
 
-        <div class="board" id="aq-board">
+        <div class="board" id="aq-board" style="--wl:<%= activeWord.word_length %>">
           <% activeGuesses.forEach(function(g) { %>
             <div class="row" data-filled="1">
               <% g.result.forEach(function(r) { %>
@@ -125,16 +125,6 @@
         <% } %>
       </div>
 
-      <%# Tile scaling for this word's length %>
-      <% if (activeWord.word_length >= 7) { %>
-        <style>
-          #aq-board .tile {
-            width: <%= Math.min(54, Math.floor(300 / activeWord.word_length)) %>px;
-            height: <%= Math.min(54, Math.floor(300 / activeWord.word_length)) %>px;
-            font-size: <%= Math.min(1.7, 10 / activeWord.word_length) %>rem;
-          }
-        </style>
-      <% } %>
     <% } %>
 
     <%# Players section %>
