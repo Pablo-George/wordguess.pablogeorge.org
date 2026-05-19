@@ -4,7 +4,7 @@ const { ensureAuth } = require('../services/authService');
 const { POKEMON_GEN1 } = require('../data/pokemon_gen1');
 
 // Sorted by name length ascending so more players = longer (harder) name
-const POKEMON_BY_LENGTH = [...POKEMON_GEN1].sort((a, b) => a.length - b.length || a.localeCompare(b));
+const POKEMON_BY_LENGTH = [...POKEMON_GEN1].filter(p => p.length >= 5).sort((a, b) => a.length - b.length || a.localeCompare(b));
 
 const router = express.Router();
 
