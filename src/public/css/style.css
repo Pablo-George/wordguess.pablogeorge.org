@@ -778,6 +778,95 @@ code {
   margin-bottom: 1rem;
 }
 
+/* ── ANIME QUOTES ─────────────────────────────── */
+.anime-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.anime-chip {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  padding: 0.45rem 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.anime-chip:hover { border-color: var(--text-dim); color: var(--text); }
+.anime-chip.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+.aq-progress {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.aq-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.aq-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.aq-quote-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 1rem 0 1.75rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.aq-word {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  border-radius: 2px;
+  padding: 0.2rem 0.4rem;
+}
+
+.aq-word--given  { color: var(--text-dim); background: none; border: none; cursor: default; }
+.aq-word--solved { color: #000; background: var(--green); }
+.aq-word--revealed { color: #fff; background: var(--pink); }
+.aq-word--unsolved {
+  background: var(--card);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  padding: 0.3rem 0.5rem;
+  transition: border-color 0.15s;
+}
+.aq-word--unsolved:hover { border-color: var(--text-dim); }
+.aq-word--active { border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent); }
+
+.aq-blank {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-bottom: 1.5px solid var(--text-dim);
+}
+
+.aq-board-section {
+  margin-bottom: 1.5rem;
+}
+
 /* ── KNOCKOUT ────────────────────────────────── */
 .knockout-header {
   display: flex;

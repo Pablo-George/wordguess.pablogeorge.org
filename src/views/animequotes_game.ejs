@@ -1,0 +1,160 @@
+<%- include('header') %>
+<div class="animequotes-page">
+
+  <h1>Anime Quote</h1>
+  <p class="puzzle-date"><%= game.anime_name %> &nbsp;·&nbsp; Game #<%= game.id %></p>
+
+  <%# ── WAITING ──────────────────────────────────── %>
+  <% if (game.status === 'waiting') { %>
+
+    <section class="dash-section">
+      <h2>Lobby</h2>
+      <p class="text-sm" style="margin-bottom:0.75rem">Share this game ID:</p>
+      <div class="game-code"><%= game.id %></div>
+
+      <div class="member-list" style="margin:1.5rem 0">
+        <% players.forEach(function(p) { %>
+          <div class="member-card">
+            <img src="<%= p.avatar_url || '' %>" alt="" class="member-avatar" onerror="this.style.display='none'">
+            <div class="member-info"><strong><%= p.display_name %></strong></div>
+            <% if (p.user_id === game.created_by) { %><span class="badge">Host</span><% } %>
+          </div>
+        <% }) %>
+      </div>
+
+      <% if (!myPlayer) { %>
+        <form action="/games/animequotes/<%= game.id %>/join" method="POST">
+          <button type="submit" class="btn btn-primary">Join Game</button>
+        </form>
+      <% } else if (user.id === game.created_by) { %>
+        <p class="text-sm" style="margin-bottom:0.75rem">
+          <%= players.length %> player<%= players.length !== 1 ? 's' : '' %> →
+          quote will be ~<%= [8,10,12,14,16,18,20][Math.min(players.length-1,6)] %> words
+        </p>
+        <form action="/games/animequotes/<%= game.id %>/start" method="POST" id="start-form">
+          <button type="submit" class="btn btn-primary" id="start-btn">Generate &amp; Start</button>
+        </form>
+        <script>
+          document.getElementById('start-form').addEventListener('submit', function() {
+            document.getElementById('start-btn').textContent = 'Generating quote…';
+            document.getElementById('start-btn').disabled = true;
+          });
+        </script>
+      <% } else { %>
+        <p class="text-sm">Waiting for the host to start...</p>
+      <% } %>
+    </section>
+
+    <script>setTimeout(function() { window.location.reload(); }, 4000);</script>
+
+  <%# ── ACTIVE / COMPLETED ────────────────────────── %>
+  <% } else { %>
+
+    <%# Progress bar %>
+    <div class="aq-progress">
+      <span class="text-sm"><%= totalSolved %>/<%= totalGuessable %> words solved</span>
+      <div class="aq-progress-bar">
+        <div class="aq-progress-fill" style="width:<%= totalGuessable > 0 ? Math.round(totalSolved/totalGuessable*100) : 0 %>%"></div>
+      </div>
+    </div>
+
+    <%# Quote layout %>
+    <div class="aq-quote-layout" id="quote-layout">
+      <% quoteWords.forEach(function(w) { %>
+        <% if (w.is_given || w.solved || w.revealed) { %>
+          <span class="aq-word <%= w.solved ? 'aq-word--solved' : (w.revealed ? 'aq-word--revealed' : 'aq-word--given') %>">
+            <%= w.word %>
+          </span>
+        <% } else { %>
+          <button class="aq-word aq-word--unsolved <%= activeWord && activeWord.id === w.id ? 'aq-word--active' : '' %>"
+            onclick="window.location.href='?w=<%= w.id %>'">
+            <% for (var k = 0; k < w.word_length; k++) { %><span class="aq-blank"></span><% } %>
+          </button>
+        <% } %>
+      <% }) %>
+    </div>
+
+    <% if (game.status === 'completed') { %>
+      <div class="result-message win" style="text-align:center;margin:1.5rem 0">
+        Quote complete! <span style="color:var(--text-dim);font-size:0.85em">— <%= game.anime_name %></span>
+      </div>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-bottom:2rem">
+        <a href="/games/animequotes/new" class="btn btn-primary">New Game</a>
+        <a href="/games" class="btn">Games</a>
+      </div>
+    <% } %>
+
+    <%# Active word board %>
+    <% if (activeWord && game.status === 'active') { %>
+      <div class="aq-board-section">
+        <h2 style="font-family:var(--font-body);font-size:0.7rem;text-transform:uppercase;letter-spacing:.14em;color:var(--text-dim);margin-bottom:.75rem">
+          Guessing word <%= activeWord.word_index + 1 %> &nbsp;·&nbsp; <%= activeWord.word_length %> letters
+          &nbsp;·&nbsp; <%= activeGuesses.length %>/<%= maxGuesses %> guesses used
+        </h2>
+
+        <div class="board" id="aq-board">
+          <% activeGuesses.forEach(function(g) { %>
+            <div class="row">
+              <% g.result.forEach(function(r) { %>
+                <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
+              <% }) %>
+            </div>
+          <% }) %>
+          <% if (!activeWord.solved && !activeWord.revealed) { %>
+            <% for (var i = activeGuesses.length; i < maxGuesses; i++) { %>
+              <div class="row">
+                <% for (var j = 0; j < activeWord.word_length; j++) { %>
+                  <div class="tile tile-empty"></div>
+                <% } %>
+              </div>
+            <% } %>
+          <% } %>
+        </div>
+
+        <% if (!activeWord.solved && !activeWord.revealed && activeGuesses.length < maxGuesses) { %>
+          <form id="aq-guess-form" class="guess-form" data-word-id="<%= activeWord.id %>" data-game-id="<%= game.id %>">
+            <input type="text" id="aq-guess-input" maxlength="<%= activeWord.word_length %>"
+              autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" autofocus>
+            <button type="submit" class="btn btn-primary">Guess</button>
+          </form>
+          <div id="aq-error" class="error-msg"></div>
+        <% } else if (activeWord.solved) { %>
+          <div class="result-message win">Word solved!</div>
+        <% } else { %>
+          <div class="result-message fail">Out of guesses — word was <strong><%= activeWord.word %></strong></div>
+        <% } %>
+      </div>
+
+      <%# Tile scaling for this word's length %>
+      <% if (activeWord.word_length >= 7) { %>
+        <style>
+          #aq-board .tile {
+            width: <%= Math.min(54, Math.floor(300 / activeWord.word_length)) %>px;
+            height: <%= Math.min(54, Math.floor(300 / activeWord.word_length)) %>px;
+            font-size: <%= Math.min(1.7, 10 / activeWord.word_length) %>rem;
+          }
+        </style>
+      <% } %>
+    <% } %>
+
+    <%# Players section %>
+    <section class="dash-section" style="margin-top:2rem">
+      <h2>Players</h2>
+      <div class="player-status-list">
+        <% players.forEach(function(p) { %>
+          <div class="player-status-item">
+            <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+            <span style="flex:1"><%= p.display_name %></span>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+
+    <% if (game.status === 'active') { %>
+      <script>setTimeout(function() { window.location.reload(); }, 8000);</script>
+    <% } %>
+
+  <% } %>
+
+</div>
+<%- include('footer') %>

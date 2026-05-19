@@ -10,6 +10,7 @@
     "seed": "node src/db/seed.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "better-sqlite3": "^11.0.0",
     "connect-sqlite3": "^0.9.15",
     "ejs": "^3.1.10",

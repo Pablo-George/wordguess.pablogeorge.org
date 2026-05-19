@@ -1,0 +1,65 @@
+<%- include('header') %>
+<div class="animequotes-new">
+  <h1>Anime Quote</h1>
+  <p class="puzzle-date">Choose your anime</p>
+
+  <form action="/games/animequotes" method="POST" id="aq-create-form">
+    <input type="hidden" name="anime_name" id="anime-name-input">
+
+    <div class="anime-grid" id="anime-grid">
+      <% animeList.forEach(function(anime) { %>
+        <button type="button" class="anime-chip" data-anime="<%= anime %>" onclick="selectAnime(this)">
+          <%= anime %>
+        </button>
+      <% }) %>
+    </div>
+
+    <div class="form-group" style="margin-top:1.5rem;max-width:360px">
+      <label>Or type your own</label>
+      <input type="text" id="custom-anime-input" placeholder="e.g. Trigun, Toradora..." maxlength="80"
+        oninput="selectCustom(this.value)">
+    </div>
+
+    <div id="selected-display" style="margin:1rem 0;display:none">
+      <span class="text-sm">Selected: </span>
+      <strong id="selected-name" style="color:var(--accent)"></strong>
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="create-btn" disabled>Create Lobby</button>
+  </form>
+</div>
+
+<script>
+  var selectedAnime = '';
+
+  function selectAnime(btn) {
+    selectedAnime = btn.getAttribute('data-anime');
+    document.querySelectorAll('.anime-chip').forEach(function(c) { c.classList.remove('selected'); });
+    document.getElementById('custom-anime-input').value = '';
+    btn.classList.add('selected');
+    updateSelection(selectedAnime);
+  }
+
+  function selectCustom(val) {
+    selectedAnime = val.trim();
+    document.querySelectorAll('.anime-chip').forEach(function(c) { c.classList.remove('selected'); });
+    updateSelection(selectedAnime);
+  }
+
+  function updateSelection(name) {
+    var display = document.getElementById('selected-display');
+    var nameEl = document.getElementById('selected-name');
+    var btn = document.getElementById('create-btn');
+    var input = document.getElementById('anime-name-input');
+    if (name) {
+      display.style.display = 'block';
+      nameEl.textContent = name;
+      input.value = name;
+      btn.disabled = false;
+    } else {
+      display.style.display = 'none';
+      btn.disabled = true;
+    }
+  }
+</script>
+<%- include('footer') %>

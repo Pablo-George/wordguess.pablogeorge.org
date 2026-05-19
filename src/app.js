@@ -89,6 +89,7 @@ const dailyRoutes = require('./routes/daily');
 const friendRoutes = require('./routes/friends');
 const gamesRoutes = require('./routes/games');
 const knockoutRoutes = require('./routes/knockout');
+const animequotesRoutes = require('./routes/animequotes');
 const battleRoutes = require('./routes/battles');
 const royaleRoutes = require('./routes/royale');
 
@@ -97,6 +98,7 @@ app.use(dailyRoutes);
 app.use(friendRoutes);
 app.use(gamesRoutes);
 app.use(knockoutRoutes);
+app.use(animequotesRoutes);
 app.use(battleRoutes);
 app.use(royaleRoutes);
 

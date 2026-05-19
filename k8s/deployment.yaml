@@ -65,6 +65,11 @@ spec:
                 secretKeyRef:
                   name: wordguess-secrets
                   key: SESSION_SECRET
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wordguess-secrets
+                  key: GEMINI_API_KEY
           volumeMounts:
             - name: data
               mountPath: /app/data

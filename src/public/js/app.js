@@ -56,6 +56,30 @@
     });
   }
 
+  // Anime Quote guesses
+  var aqForm = document.getElementById('aq-guess-form');
+  if (aqForm) {
+    aqForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var input = document.getElementById('aq-guess-input');
+      var guess = input.value.trim().toUpperCase().replace(/[^A-Z]/g, '');
+      if (!guess.length) return;
+      var gameId = aqForm.getAttribute('data-game-id');
+      var wordId = aqForm.getAttribute('data-word-id');
+      fetch('/games/animequotes/' + gameId + '/guess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guess: guess, word_id: wordId })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) { document.getElementById('aq-error').textContent = data.error; return; }
+        window.location.reload();
+      })
+      .catch(function() { document.getElementById('aq-error').textContent = 'Error'; });
+    });
+  }
+
   // Knockout guesses
   var knockoutForm = document.getElementById('knockout-guess-form');
   if (knockoutForm) {
