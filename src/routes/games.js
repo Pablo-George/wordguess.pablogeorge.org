@@ -40,6 +40,54 @@ function computeFeedback(guess, answer) {
 // GET /games
 router.get('/games', ensureAuth, (req, res) => {
   const db = getDb();
+
+  const friendIds = db.prepare(`
+    SELECT CASE WHEN user_id = ? THEN friend_id ELSE user_id END as id
+    FROM friends WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'
+  `).all(req.user.id, req.user.id, req.user.id).map(r => r.id);
+
+  let openLobbies = [];
+  if (friendIds.length > 0) {
+    const ph = friendIds.map(() => '?').join(',');
+    const userId = req.user.id;
+
+    const pokemonLobbies = db.prepare(`
+      SELECT pg.id, 'pokemon' as type, u.display_name as host_name, u.avatar_url as host_avatar,
+        (SELECT COUNT(*) FROM pokemon_game_players WHERE game_id = pg.id) as player_count,
+        NULL as subtitle
+      FROM pokemon_games pg
+      JOIN users u ON u.id = pg.created_by
+      WHERE pg.status = 'waiting' AND pg.created_by IN (${ph})
+        AND pg.id NOT IN (SELECT game_id FROM pokemon_game_players WHERE user_id = ?)
+      ORDER BY pg.created_at DESC
+    `).all(...friendIds, userId);
+
+    const knockoutLobbies = db.prepare(`
+      SELECT kg.id, 'knockout' as type, u.display_name as host_name, u.avatar_url as host_avatar,
+        (SELECT COUNT(*) FROM knockout_players WHERE game_id = kg.id) as player_count,
+        NULL as subtitle
+      FROM knockout_games kg
+      JOIN users u ON u.id = kg.created_by
+      WHERE kg.status = 'waiting' AND kg.created_by IN (${ph})
+        AND kg.id NOT IN (SELECT game_id FROM knockout_players WHERE user_id = ?)
+      ORDER BY kg.created_at DESC
+    `).all(...friendIds, userId);
+
+    const animeLobbies = db.prepare(`
+      SELECT ag.id, 'animequotes' as type, u.display_name as host_name, u.avatar_url as host_avatar,
+        (SELECT COUNT(*) FROM animequote_players WHERE game_id = ag.id) as player_count,
+        ag.anime_name as subtitle
+      FROM animequote_games ag
+      JOIN users u ON u.id = ag.created_by
+      WHERE ag.status = 'waiting' AND ag.created_by IN (${ph})
+        AND ag.id NOT IN (SELECT game_id FROM animequote_players WHERE user_id = ?)
+      ORDER BY ag.created_at DESC
+    `).all(...friendIds, userId);
+
+    openLobbies = [...pokemonLobbies, ...knockoutLobbies, ...animeLobbies]
+      .sort((a, b) => b.id - a.id);
+  }
+
   const myGames = db.prepare(`
     SELECT pg.*, u.display_name as creator_name,
       (SELECT COUNT(*) FROM pokemon_game_players WHERE game_id = pg.id) as player_count
@@ -51,7 +99,7 @@ router.get('/games', ensureAuth, (req, res) => {
     LIMIT 10
   `).all(req.user.id);
 
-  res.render('games', { title: 'Games', myGames });
+  res.render('games', { title: 'Games', myGames, openLobbies });
 });
 
 // POST /games/pokemon — create

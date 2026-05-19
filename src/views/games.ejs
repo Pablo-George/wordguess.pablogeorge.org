@@ -3,12 +3,26 @@
   <h1>Games</h1>
 
   <section class="dash-section">
-    <h2>Join a Game</h2>
-    <form id="join-game-form" class="inline-form">
-      <input type="text" id="join-game-id" placeholder="Enter game ID" maxlength="10" inputmode="numeric" style="max-width:160px;width:100%">
-      <button type="submit" class="btn btn-primary">Join</button>
-    </form>
-    <p class="text-sm">Get the game ID from a friend</p>
+    <h2>Friend Lobbies</h2>
+    <% if (openLobbies.length === 0) { %>
+      <p class="empty">No open lobbies from friends right now</p>
+    <% } else { %>
+      <% var typeNames = { pokemon: 'Pokémon Name', knockout: 'Knockout', animequotes: 'Anime Quote' }; %>
+      <% var joinUrls = { pokemon: '/games/pokemon/', knockout: '/games/knockout/', animequotes: '/games/animequotes/' }; %>
+      <% openLobbies.forEach(function(g) { %>
+        <div class="dash-card">
+          <div style="display:flex;align-items:center;gap:0.6rem;flex:1">
+            <img src="<%= g.host_avatar || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+            <div>
+              <strong><%= g.host_name %>'s <%= typeNames[g.type] %></strong>
+              <% if (g.subtitle) { %><span class="text-sm" style="display:block"><%= g.subtitle %></span><% } %>
+              <span class="text-sm"><%= g.player_count %> player<%= g.player_count !== 1 ? 's' : '' %> in lobby</span>
+            </div>
+          </div>
+          <a href="<%= joinUrls[g.type] %><%= g.id %>" class="btn btn-primary btn-sm">Join</a>
+        </div>
+      <% }) %>
+    <% } %>
   </section>
 
   <section class="dash-section">
@@ -64,11 +78,4 @@
   <% } %>
 </div>
 
-<script>
-  document.getElementById('join-game-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    var id = document.getElementById('join-game-id').value.trim();
-    if (id) window.location.href = '/games/pokemon/' + id;
-  });
-</script>
 <%- include('footer') %>
