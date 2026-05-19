@@ -1,0 +1,19 @@
+<%- include('header') %>
+<div class="sessions-page">
+  <h1>Sessions - <%= group.name %></h1>
+  <a href="/groups/<%= group.id %>/sessions/new" class="btn btn-primary">New Session</a>
+
+  <% if (sessions.length === 0) { %>
+    <p class="empty">No sessions yet</p>
+  <% } %>
+
+  <% sessions.forEach(function(s) { %>
+    <div class="session-card">
+      <h3><%= s.name %></h3>
+      <p class="text-sm"><%= s.start_date %> to <%= s.end_date %></p>
+      <p class="text-sm">Mode: <%= s.scoring_mode %></p>
+      <a href="/sessions/<%= s.id %>" class="btn btn-sm">Leaderboard</a>
+    </div>
+  <% }) %>
+</div>
+<%- include('footer') %>

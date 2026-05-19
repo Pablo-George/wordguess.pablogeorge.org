@@ -1,0 +1,89 @@
+<%- include('header') %>
+<div class="friends-page">
+  <h1>Friends</h1>
+
+  <div class="friend-codes">
+    <section class="code-section">
+      <h2>Your Code</h2>
+      <div class="code-display"><%= friendCode %></div>
+      <p class="text-sm">Share this code with friends so they can add you</p>
+    </section>
+
+    <section class="code-section">
+      <h2>Add by Code</h2>
+      <form id="add-by-code-form" class="inline-form">
+        <input type="text" id="friend-code-input" maxlength="5" placeholder="Enter 5-letter code" style="text-transform:uppercase;width:160px" autocomplete="off">
+        <button type="submit" class="btn btn-primary">Add Friend</button>
+      </form>
+      <div id="code-error" class="error-msg"></div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Your Invite Link</h2>
+    <div class="invite-link-box">
+      <input type="text" id="invite-link" value="<%= inviteLink %>" readonly onclick="this.select()">
+      <button class="btn btn-sm btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('invite-link').value);this.textContent='Copied!'">Copy</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Friend Requests (<%= incoming.length %>)</h2>
+    <% if (incoming.length === 0) { %>
+      <p class="empty">No pending requests</p>
+    <% } %>
+    <% incoming.forEach(function(f) { %>
+      <div class="friend-card">
+        <img src="<%= f.avatar_url || '' %>" alt="" class="friend-avatar" onerror="this.style.display='none'">
+        <div class="friend-info">
+          <strong><%= f.display_name %></strong>
+          <span class="text-sm">Wants to be friends</span>
+        </div>
+        <form action="/friends/accept/<%= f.id %>" method="POST" style="display:inline">
+          <button class="btn btn-sm btn-primary">Accept</button>
+        </form>
+        <form action="/friends/remove/<%= f.id %>" method="POST" style="display:inline">
+          <button class="btn btn-sm btn-danger">Decline</button>
+        </form>
+      </div>
+    <% }) %>
+  </section>
+
+  <section>
+    <h2>Sent Requests</h2>
+    <% if (outgoing.length === 0) { %>
+      <p class="empty">No sent requests</p>
+    <% } %>
+    <% outgoing.forEach(function(f) { %>
+      <div class="friend-card">
+        <img src="<%= f.avatar_url || '' %>" alt="" class="friend-avatar" onerror="this.style.display='none'">
+        <div class="friend-info">
+          <strong><%= f.display_name %></strong>
+          <span class="text-sm">Awaiting response</span>
+        </div>
+        <form action="/friends/remove/<%= f.id %>" method="POST" style="display:inline">
+          <button class="btn btn-sm btn-danger">Cancel</button>
+        </form>
+      </div>
+    <% }) %>
+  </section>
+
+  <section>
+    <h2>Friends (<%= accepted.length %>)</h2>
+    <% if (accepted.length === 0) { %>
+      <p class="empty">No friends yet</p>
+    <% } %>
+    <% accepted.forEach(function(f) { %>
+      <div class="friend-card">
+        <img src="<%= f.avatar_url || '' %>" alt="" class="friend-avatar" onerror="this.style.display='none'">
+        <div class="friend-info">
+          <strong><%= f.display_name %></strong>
+        </div>
+        <form action="/friends/remove/<%= f.id %>" method="POST" style="display:inline">
+          <button class="btn btn-sm btn-danger">Remove</button>
+        </form>
+      </div>
+    <% }) %>
+  </section>
+</div>
+<%- include('footer') %>

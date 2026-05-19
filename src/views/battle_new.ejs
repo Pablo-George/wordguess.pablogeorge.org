@@ -1,0 +1,18 @@
+<%- include('header') %>
+<div class="form-page">
+  <h1>New Team Battle</h1>
+  <form action="/battles" method="POST" class="standard-form">
+    <div class="form-group">
+      <label for="group_id">Group (optional)</label>
+      <select id="group_id" name="group_id">
+        <option value="">No group (open)</option>
+        <% groups.forEach(function(g) { %>
+          <option value="<%= g.id %>"><%= g.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <p class="text-sm">You'll get today's word. Share the room link with friends to play 2v2!</p>
+    <button type="submit" class="btn btn-primary">Create Room</button>
+  </form>
+</div>
+<%- include('footer') %>

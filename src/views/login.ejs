@@ -1,0 +1,15 @@
+<%- include('header') %>
+<div class="login-page">
+  <div class="login-card">
+    <h1>WORDGUESS</h1>
+    <div class="login-rule"></div>
+    <p class="subtitle">Word game for friends</p>
+    <% if (typeof googleEnabled !== 'undefined' && googleEnabled) { %>
+      <a href="/auth/google" class="btn btn-google">Sign in with Google</a>
+    <% } else { %>
+      <a href="/devlogin" class="btn btn-primary">Dev Login (skip Google)</a>
+      <p class="text-sm" style="margin-top:1rem">Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET for production</p>
+    <% } %>
+  </div>
+</div>
+<%- include('footer') %>

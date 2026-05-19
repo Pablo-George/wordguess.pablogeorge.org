@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WordGuess - <%= typeof title !== 'undefined' ? title : 'Play' %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">WORDGUESS</a>
+      <div class="nav-links">
+        <% if (typeof user !== 'undefined' && user) { %>
+          <a href="/daily">Daily</a>
+          <a href="/friends">Friends</a>
+          <a href="/groups">Groups</a>
+          <a href="/battles/new">Battle</a>
+          <a href="/royale/new">Royale</a>
+          <div class="nav-user">
+            <% if (user.avatar_url) { %><img src="<%= user.avatar_url %>" alt="" class="nav-avatar"><% } %>
+            <span><%= user.display_name %></span>
+            <a href="/logout" class="nav-logout">Logout</a>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </nav>
+  <main class="container">

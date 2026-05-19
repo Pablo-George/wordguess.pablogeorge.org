@@ -1,0 +1,43 @@
+<%- include('header') %>
+<div class="daily-page">
+  <h1>Daily WordGuess</h1>
+  <p class="puzzle-date"><%= puzzleDate %></p>
+
+  <div class="board" id="board" data-max-guesses="<%= maxGuesses %>" data-word-length="<%= wordLength %>">
+    <% if (guesses.length > 0) { %>
+      <% guesses.forEach(function(g) { %>
+        <div class="row">
+          <% g.result.forEach(function(r) { %>
+            <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
+          <% }) %>
+        </div>
+      <% }) %>
+    <% } %>
+    <% if (!solved && guesses.length < maxGuesses) { %>
+      <% for (let i = guesses.length; i < maxGuesses; i++) { %>
+        <div class="row">
+          <% for (let j = 0; j < wordLength; j++) { %>
+            <div class="tile tile-empty"></div>
+          <% } %>
+        </div>
+      <% } %>
+    <% } %>
+  </div>
+
+  <% if (solved) { %>
+    <div class="result-message win">
+      Solved in <%= attempt.guesses_count %> guesses! +<%= attempt.score %> pts
+    </div>
+  <% } else if (guesses.length >= maxGuesses) { %>
+    <div class="result-message fail">
+      Out of guesses! The word was "<%= answer %>"
+    </div>
+  <% } else { %>
+    <form id="guess-form" class="guess-form">
+      <input type="text" id="guess-input" maxlength="<%= wordLength %>" autocomplete="off" autofocus>
+      <button type="submit" class="btn btn-primary">Guess</button>
+    </form>
+    <div id="error-msg" class="error-msg"></div>
+  <% } %>
+</div>
+<%- include('footer') %>

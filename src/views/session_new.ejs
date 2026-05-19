@@ -1,0 +1,26 @@
+<%- include('header') %>
+<div class="form-page">
+  <h1>New Session</h1>
+  <form action="/groups/<%= group.id %>/sessions" method="POST" class="standard-form">
+    <div class="form-group">
+      <label for="name">Session Name</label>
+      <input type="text" id="name" name="name" placeholder="e.g. May Madness" required>
+    </div>
+    <div class="form-group">
+      <label for="start_date">Start Date</label>
+      <input type="date" id="start_date" name="start_date" value="<%= new Date().toISOString().slice(0,10) %>" required>
+    </div>
+    <div class="form-group">
+      <label for="end_date">End Date</label>
+      <input type="date" id="end_date" name="end_date" value="<%= new Date(Date.now() + 7*86400000).toISOString().slice(0,10) %>" required>
+    </div>
+    <div class="form-group">
+      <label for="scoring_mode">Scoring Mode</label>
+      <select id="scoring_mode" name="scoring_mode">
+        <option value="daily_classic">Daily Classic</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Session</button>
+  </form>
+</div>
+<%- include('footer') %>

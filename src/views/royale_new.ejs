@@ -1,0 +1,22 @@
+<%- include('header') %>
+<div class="form-page">
+  <h1>New Battle Royale</h1>
+  <form action="/royale" method="POST" class="standard-form">
+    <div class="form-group">
+      <label for="group_id">Group (optional)</label>
+      <select id="group_id" name="group_id">
+        <option value="">No group (open)</option>
+        <% groups.forEach(function(g) { %>
+          <option value="<%= g.id %>"><%= g.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="round_time_seconds">Round Time (seconds)</label>
+      <input type="number" id="round_time_seconds" name="round_time_seconds" value="90" min="30" max="300">
+    </div>
+    <p class="text-sm">3-20 players, last one standing wins!</p>
+    <button type="submit" class="btn btn-primary">Create Game</button>
+  </form>
+</div>
+<%- include('footer') %>

@@ -1,0 +1,52 @@
+<%- include('header') %>
+<div class="dashboard">
+  <h1>Dashboard</h1>
+
+  <section class="dash-section">
+    <h2>Today's Puzzle</h2>
+    <div class="dash-card">
+      <% if (todayAttempt && todayAttempt.solved) { %>
+        <p>Solved in <%= todayAttempt.guesses_count %> guesses! <strong>+<%= todayAttempt.score %> pts</strong></p>
+        <a href="/daily" class="btn btn-sm">View</a>
+      <% } else if (todayAttempt && !todayAttempt.solved && todayAttempt.guesses_count >= 6) { %>
+        <p>Failed today's puzzle. Better luck tomorrow!</p>
+        <a href="/daily" class="btn btn-sm">View</a>
+      <% } else { %>
+        <p>Today's word is ready. Can you solve it?</p>
+        <a href="/daily" class="btn btn-primary">Play</a>
+      <% } %>
+    </div>
+  </section>
+
+  <div class="dash-grid">
+    <section class="dash-section">
+      <h2>Active Sessions</h2>
+      <% if (activeSessions.length === 0) { %>
+        <p class="empty">No active sessions</p>
+      <% } %>
+      <% activeSessions.forEach(function(s) { %>
+        <div class="dash-card">
+          <strong><%= s.name %></strong>
+          <span class="text-sm"><%= s.group_name %></span>
+          <span class="text-sm"><%= s.start_date %> - <%= s.end_date %></span>
+          <a href="/sessions/<%= s.id %>" class="btn btn-sm">View</a>
+        </div>
+      <% }) %>
+    </section>
+
+    <section class="dash-section">
+      <h2>Your Groups</h2>
+      <% if (groups.length === 0) { %>
+        <p class="empty">No groups yet</p>
+      <% } %>
+      <% groups.forEach(function(g) { %>
+        <div class="dash-card">
+          <strong><%= g.name %></strong>
+          <span class="text-sm"><%= g.member_count %> members</span>
+          <a href="/groups/<%= g.id %>" class="btn btn-sm">Open</a>
+        </div>
+      <% }) %>
+    </section>
+  </div>
+</div>
+<%- include('footer') %>

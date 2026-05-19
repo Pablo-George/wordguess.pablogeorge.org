@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wordguess
+  namespace: wordguess
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: wordguess.pablogeorge.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wordguess
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - wordguess.pablogeorge.org
+      secretName: wordguess-pablogeorge-org-tls

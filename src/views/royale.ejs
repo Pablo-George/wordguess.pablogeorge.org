@@ -1,0 +1,83 @@
+<%- include('header') %>
+<div class="royale-page">
+  <h1>Battle Royale</h1>
+  <p class="text-sm">Status: <strong><%= game.status %></strong> | Round: <%= game.current_round %>/<%= game.max_rounds || 10 %></p>
+
+  <section>
+    <h2>Players</h2>
+    <div class="player-grid">
+      <% players.forEach(function(p) { %>
+        <div class="royale-player <%= p.status %>">
+          <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+          <%= p.display_name %>
+          <% if (p.status === 'eliminated') { %><span class="badge dead">Eliminated R<%= p.eliminated_round %></span><% } %>
+          <% if (p.status === 'alive' && game.status === 'completed') { %><span class="badge winner">Winner!</span><% } %>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <% if (game.status === 'waiting') { %>
+    <% if (players.some(p => p.user_id === game.created_by)) { %>
+      <form action="/royale/<%= game.id %>/start" method="POST" class="inline-form">
+        <button type="submit" class="btn btn-primary">Start Game</button>
+      </form>
+    <% } else { %>
+      <form action="/royale/<%= game.id %>/join" method="POST" class="inline-form">
+        <button type="submit" class="btn btn-primary">Join Game</button>
+      </form>
+      <p class="text-sm">Share code: <code>/royale/<%= game.id %></code></p>
+    <% } %>
+    <p class="text-sm">Share: <code>/royale/<%= game.id %></code></p>
+  <% } %>
+
+  <% if (game.status === 'active') { %>
+    <% var myPlayer = players.find(p => p.user_id === user.id); %>
+    <% if (myPlayer && myPlayer.status === 'alive' && currentRound) { %>
+      <div class="round-timer" data-ends="<%= currentRound.ends_at %>">
+        Time remaining: <span id="timer"><%= game.round_time_seconds %></span>s
+      </div>
+      <h3>Round <%= game.current_round %></h3>
+      <form id="royale-guess-form" class="guess-form" data-game-id="<%= game.id %>">
+        <input type="text" id="royale-guess-input" maxlength="5" autocomplete="off">
+        <button type="submit" class="btn btn-primary">Guess</button>
+      </form>
+      <div id="royale-error" class="error-msg"></div>
+    <% } %>
+    <% if (myPlayer && myPlayer.status === 'eliminated') { %>
+      <p class="text-sm">You were eliminated in round <%= myPlayer.eliminated_round %>. Better luck next time!</p>
+    <% } %>
+
+    <div class="guesses-section">
+      <h4>Round Guesses</h4>
+      <div id="royale-guesses-list">
+        <% roundGuesses.forEach(function(g) { %>
+          <div class="guess-row">
+            <% JSON.parse(g.result_json).forEach(function(r) { %>
+              <span class="tile tile-<%= r.status %>"><%= r.letter %></span>
+            <% }) %>
+            <span class="text-sm">- <%= g.display_name %></span>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <% if (players.some(p => p.user_id === game.created_by)) { %>
+      <form action="/royale/<%= game.id %>/advance" method="POST" class="inline-form" style="margin-top:1rem">
+        <button type="submit" class="btn btn-primary">Advance to Next Round</button>
+      </form>
+    <% } %>
+  <% } %>
+
+  <% if (game.status === 'completed') { %>
+    <% var winner = players.find(p => p.status === 'alive'); %>
+    <% if (winner) { %>
+      <div class="result-message win">
+        Winner: <%= winner.display_name %>!
+      </div>
+    <% } else { %>
+      <div class="result-message">Game over!</div>
+    <% } %>
+  <% } %>
+</div>
+<%- include('footer') %>

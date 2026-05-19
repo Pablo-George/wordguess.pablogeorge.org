@@ -1,0 +1,76 @@
+<%- include('header') %>
+<div class="battle-page">
+  <h1>Team Battle</h1>
+  <p class="text-sm">Status: <strong><%= battle.status %></strong></p>
+
+  <div class="battle-teams">
+    <div class="team team-1">
+      <h3>Team 1</h3>
+      <% players.filter(p => p.team_number === 1).forEach(function(p) { %>
+        <div class="player-badge">
+          <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+          <%= p.display_name %>
+          <% if (p.user_id === user.id) { %><span class="badge">You</span><% } %>
+        </div>
+      <% }) %>
+    </div>
+    <div class="team team-2">
+      <h3>Team 2</h3>
+      <% players.filter(p => p.team_number === 2).forEach(function(p) { %>
+        <div class="player-badge">
+          <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+          <%= p.display_name %>
+          <% if (p.user_id === user.id) { %><span class="badge">You</span><% } %>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <% if (battle.status === 'waiting') { %>
+    <% if (players.some(p => p.user_id === user.id && p.user_id === battle.created_by)) { %>
+      <form action="/battles/<%= battle.id %>/start" method="POST" class="inline-form">
+        <button type="submit" class="btn btn-primary">Start Battle</button>
+      </form>
+    <% } else { %>
+      <p class="text-sm">Waiting for host to start...</p>
+    <% } %>
+    <p class="text-sm">Share: <code>/battles/<%= battle.id %></code></p>
+  <% } %>
+
+  <% if (battle.status === 'active') { %>
+    <div class="guesses-section">
+      <h3>Guesses</h3>
+      <div class="guesses-list" id="guesses-list">
+        <% var teamGuesses = {}; %>
+        <% guesses.forEach(function(g) { %>
+          <% if (!teamGuesses[g.team_number]) teamGuesses[g.team_number] = []; %>
+          <% teamGuesses[g.team_number].push(g); %>
+        <% }) %>
+        <% [1, 2].forEach(function(tn) { %>
+          <% if (teamGuesses[tn]) { %>
+            <h4>Team <%= tn %></h4>
+            <% teamGuesses[tn].forEach(function(g) { %>
+              <div class="guess-row">
+                <% JSON.parse(g.result_json).forEach(function(r) { %>
+                  <span class="tile tile-<%= r.status %>"><%= r.letter %></span>
+                <% }) %>
+                <span class="text-sm">- <%= g.display_name %></span>
+              </div>
+            <% }) %>
+          <% } %>
+        <% }) %>
+      </div>
+
+      <form id="battle-guess-form" class="guess-form" data-battle-id="<%= battle.id %>">
+        <input type="text" id="battle-guess-input" maxlength="5" autocomplete="off">
+        <button type="submit" class="btn btn-primary">Guess</button>
+      </form>
+      <div id="battle-error" class="error-msg"></div>
+    </div>
+  <% } %>
+
+  <% if (battle.status === 'completed') { %>
+    <div class="result-message win">Battle complete!</div>
+  <% } %>
+</div>
+<%- include('footer') %>

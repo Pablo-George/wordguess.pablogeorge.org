@@ -1,0 +1,12 @@
+<%- include('header') %>
+<div class="profile-page">
+  <h1>Profile</h1>
+  <div class="profile-card">
+    <img src="<%= user.avatar_url %>" alt="" class="profile-avatar">
+    <h2><%= user.display_name %></h2>
+    <p><%= user.email %></p>
+    <p class="text-sm">Joined: <%= user.created_at %></p>
+    <p class="text-sm">Last login: <%= user.last_login_at %></p>
+  </div>
+</div>
+<%- include('footer') %>

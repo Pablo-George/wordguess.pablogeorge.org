@@ -1,0 +1,21 @@
+{
+  "name": "wordguess",
+  "version": "1.0.0",
+  "description": "Private-ish word game app for friends",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node --env-file .env src/app.js",
+    "dev": "node --env-file .env --watch src/app.js",
+    "migrate": "node src/db/migrate.js",
+    "seed": "node src/db/seed.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "connect-sqlite3": "^0.9.15",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0"
+  }
+}

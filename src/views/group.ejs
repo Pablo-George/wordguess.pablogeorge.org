@@ -1,0 +1,54 @@
+<%- include('header') %>
+<div class="group-page">
+  <h1><%= group.name %></h1>
+  <% if (group.description) { %>
+    <p class="group-desc"><%= group.description %></p>
+  <% } %>
+
+  <div class="group-actions">
+    <a href="/groups/<%= group.id %>/sessions" class="btn">Sessions</a>
+    <a href="/groups/<%= group.id %>/sessions/new" class="btn btn-primary">New Session</a>
+    <a href="/battles/new?group_id=<%= group.id %>" class="btn">Team Battle</a>
+    <a href="/royale/new?group_id=<%= group.id %>" class="btn">Battle Royale</a>
+  </div>
+
+  <section>
+    <h2>Members (<%= members.length %>)</h2>
+    <div class="member-list">
+      <% members.forEach(function(m) { %>
+        <div class="member-card">
+          <img src="<%= m.avatar_url || '' %>" alt="" class="member-avatar" onerror="this.style.display='none'">
+          <div class="member-info">
+            <strong><%= m.display_name %></strong>
+            <% if (m.role === 'admin') { %><span class="badge">Admin</span><% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <% if (isAdmin) { %>
+    <section>
+      <h2>Invite Member</h2>
+      <form id="invite-form" class="inline-form">
+        <input type="email" id="invite-email" placeholder="Enter email" required>
+        <button type="submit" class="btn btn-primary">Invite</button>
+      </form>
+      <div id="invite-error" class="error-msg"></div>
+    </section>
+  <% } %>
+
+  <% if (sessions.length > 0) { %>
+    <section>
+      <h2>Recent Sessions</h2>
+      <% sessions.forEach(function(s) { %>
+        <div class="session-card">
+          <strong><%= s.name %></strong>
+          <span class="text-sm"><%= s.start_date %> - <%= s.end_date %></span>
+          <a href="/sessions/<%= s.id %>" class="btn btn-sm">View</a>
+        </div>
+      <% }) %>
+    </section>
+  <% } %>
+</div>
+<%- include('footer') %>
