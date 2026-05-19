@@ -5,7 +5,7 @@ const { ANSWERS } = require('../data/answers');
 
 const router = express.Router();
 const MAX_GUESSES = 6;
-const ROUND_MS = 3 * 60 * 1000;
+const ROUND_MS = 2 * 60 * 1000;
 
 function computeFeedback(guess, answer) {
   const result = [];
@@ -197,6 +197,8 @@ router.post('/games/knockout/:id/start', ensureAuth, (req, res) => {
   if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
     return res.redirect('/games/knockout/' + req.params.id);
   }
+  const { c: playerCount } = db.prepare('SELECT COUNT(*) as c FROM knockout_players WHERE game_id = ?').get(game.id);
+  if (playerCount < 2) return res.redirect('/games/knockout/' + req.params.id);
   const word = getRandomWord(db, game.id);
   const endsAt = new Date(Date.now() + ROUND_MS).toISOString();
   db.prepare('INSERT INTO knockout_rounds (game_id, round_number, word) VALUES (?, 1, ?)').run(game.id, word);
