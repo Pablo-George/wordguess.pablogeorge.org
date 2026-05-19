@@ -48,36 +48,34 @@ passport.deserializeUser((id, done) => {
   }
 });
 
-if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
-  passport.use(new GoogleStrategy({
-    clientID: GOOGLE_CLIENT_ID,
-    clientSecret: GOOGLE_CLIENT_SECRET,
-    callbackURL: `${BASE_URL}/auth/google/callback`,
-  }, (accessToken, refreshToken, profile, done) => {
-    try {
-      const db = getDb();
-      const email = profile.emails && profile.emails[0] ? profile.emails[0].value : '';
-      const avatar = profile.photos && profile.photos[0] ? profile.photos[0].value : '';
-      let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get(profile.id);
-      if (!user) {
-        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-        let code;
-        for (let i = 0; i < 20; i++) {
-          code = '';
-          for (let j = 0; j < 5; j++) code += chars[Math.floor(Math.random() * chars.length)];
-          if (!db.prepare('SELECT id FROM users WHERE friend_code = ?').get(code)) break;
-        }
-        const info = db.prepare('INSERT INTO users (google_id, email, display_name, avatar_url, friend_code) VALUES (?, ?, ?, ?, ?)').run(profile.id, email, profile.displayName, avatar, code);
-        user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
-      } else {
-        db.prepare('UPDATE users SET email = ?, display_name = ?, avatar_url = ?, last_login_at = CURRENT_TIMESTAMP WHERE id = ?').run(email, profile.displayName, avatar, user.id);
+passport.use(new GoogleStrategy({
+  clientID: GOOGLE_CLIENT_ID,
+  clientSecret: GOOGLE_CLIENT_SECRET,
+  callbackURL: `${BASE_URL}/auth/google/callback`,
+}, (accessToken, refreshToken, profile, done) => {
+  try {
+    const db = getDb();
+    const email = profile.emails && profile.emails[0] ? profile.emails[0].value : '';
+    const avatar = profile.photos && profile.photos[0] ? profile.photos[0].value : '';
+    let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get(profile.id);
+    if (!user) {
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      let code;
+      for (let i = 0; i < 20; i++) {
+        code = '';
+        for (let j = 0; j < 5; j++) code += chars[Math.floor(Math.random() * chars.length)];
+        if (!db.prepare('SELECT id FROM users WHERE friend_code = ?').get(code)) break;
       }
-      done(null, user);
-    } catch (err) {
-      done(err, null);
+      const info = db.prepare('INSERT INTO users (google_id, email, display_name, avatar_url, friend_code) VALUES (?, ?, ?, ?, ?)').run(profile.id, email, profile.displayName, avatar, code);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+    } else {
+      db.prepare('UPDATE users SET email = ?, display_name = ?, avatar_url = ?, last_login_at = CURRENT_TIMESTAMP WHERE id = ?').run(email, profile.displayName, avatar, user.id);
     }
-  }));
-}
+    done(null, user);
+  } catch (err) {
+    done(err, null);
+  }
+}));
 
 // View engine
 app.set('views', __dirname + '/views');
