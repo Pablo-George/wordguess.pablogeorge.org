@@ -144,6 +144,7 @@ router.post('/games/pokemon/:id/guess', ensureAuth, (req, res) => {
 
   const guess = (req.body.guess || '').toUpperCase().replace(/[^A-Z]/g, '');
   if (guess.length !== game.word_length) return res.json({ error: `Must be ${game.word_length} letters` });
+  if (!POKEMON_GEN1.includes(guess)) return res.json({ error: 'Not a valid Gen 1 Pokémon name' });
 
   const result = computeFeedback(guess, game.pokemon_name);
   const solved = guess === game.pokemon_name;
