@@ -33,15 +33,29 @@ router.get('/daily', ensureAuth, (req, res) => {
     FROM friends WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'
   `).all(req.user.id, req.user.id, req.user.id).map(r => r.id);
 
+  const userDone = !!(attempt && (attempt.solved || attempt.guesses_count >= 6));
+
   const leaderboardIds = [req.user.id, ...friendIds];
   const placeholders = leaderboardIds.map(() => '?').join(',');
-  const leaderboard = db.prepare(`
-    SELECT u.id, u.display_name, u.avatar_url, da.guesses_count, da.solved, da.score
+  const leaderboardRaw = db.prepare(`
+    SELECT u.id, u.display_name, u.avatar_url, da.id as attempt_id,
+           da.guesses_count, da.solved, da.score
     FROM daily_attempts da
     JOIN users u ON u.id = da.user_id
     WHERE da.puzzle_date = ? AND da.user_id IN (${placeholders})
     ORDER BY da.solved DESC, da.guesses_count ASC, da.created_at ASC
   `).all(puzzleDate, ...leaderboardIds);
+
+  const leaderboard = leaderboardRaw.map(entry => {
+    const completed = entry.solved || entry.guesses_count >= 6;
+    let entryGuesses = [];
+    if (userDone && completed) {
+      entryGuesses = db.prepare(
+        'SELECT result_json FROM daily_guesses WHERE attempt_id = ? ORDER BY guess_number'
+      ).all(entry.attempt_id).map(g => JSON.parse(g.result_json));
+    }
+    return { ...entry, entryGuesses };
+  });
 
   res.render('daily', {
     wordLength: word.word_length,
@@ -52,6 +66,7 @@ router.get('/daily', ensureAuth, (req, res) => {
     puzzleDate,
     answer: word.word,
     leaderboard,
+    userDone,
   });
 });
 

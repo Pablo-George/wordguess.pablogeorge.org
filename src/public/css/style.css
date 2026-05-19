@@ -369,6 +369,52 @@ code {
   min-width: 2rem;
 }
 
+/* ── DAILY FRIENDS LEADERBOARD ───────────────── */
+.friend-leaderboard { display: grid; gap: 0.75rem; }
+
+.friend-lb-entry {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 0.75rem 1rem;
+}
+
+.friend-lb-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.friend-lb-name {
+  flex: 1;
+  font-size: 0.88rem;
+}
+
+.friend-board {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.friend-board-row {
+  display: flex;
+  gap: 3px;
+}
+
+.friend-tile {
+  width: 24px;
+  height: 24px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.friend-tile-green  { background: var(--green); }
+.friend-tile-yellow { background: var(--yellow); }
+.friend-tile-gray   { background: var(--gray); border: 1px solid #2a2a3a; }
+
 /* ── DASHBOARD ───────────────────────────────── */
 .dashboard h1 { margin-bottom: 2rem; }
 

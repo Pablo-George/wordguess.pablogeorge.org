@@ -44,18 +44,32 @@
 <% if (leaderboard && leaderboard.length > 0) { %>
 <section class="dash-section" style="margin-top:2rem;text-align:left">
   <h2>Friends Today</h2>
-  <div class="player-status-list">
+  <% if (!userDone) { %><p class="text-sm" style="margin-bottom:0.75rem">Finish today's puzzle to see your friends' guesses</p><% } %>
+  <div class="friend-leaderboard">
     <% leaderboard.forEach(function(p, i) { %>
-      <div class="player-status-item <%= p.solved ? 'solved' : (p.guesses_count >= 6 ? 'failed' : '') %>">
-        <span class="stat-rank">#<%= i + 1 %></span>
-        <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
-        <span style="flex:1"><%= p.display_name %><% if (p.id === user.id) { %> <span class="text-sm">(you)</span><% } %></span>
-        <% if (p.solved) { %>
-          <span class="badge winner"><%= p.guesses_count %>/<%= 6 %></span>
-        <% } else if (p.guesses_count >= 6) { %>
-          <span class="badge dead">Failed</span>
-        <% } else { %>
-          <span class="text-sm">In progress</span>
+      <div class="friend-lb-entry">
+        <div class="friend-lb-header">
+          <span class="stat-rank">#<%= i + 1 %></span>
+          <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+          <span class="friend-lb-name"><%= p.display_name %><% if (p.id === user.id) { %> <span class="text-sm">(you)</span><% } %></span>
+          <% if (p.solved) { %>
+            <span class="badge winner"><%= p.guesses_count %>/<%= 6 %></span>
+          <% } else if (p.guesses_count >= 6) { %>
+            <span class="badge dead">Failed</span>
+          <% } else { %>
+            <span class="text-sm" style="color:var(--text-dim)">Playing…</span>
+          <% } %>
+        </div>
+        <% if (p.entryGuesses && p.entryGuesses.length > 0) { %>
+          <div class="friend-board">
+            <% p.entryGuesses.forEach(function(row) { %>
+              <div class="friend-board-row">
+                <% row.forEach(function(r) { %>
+                  <div class="friend-tile friend-tile-<%= r.status %>"></div>
+                <% }) %>
+              </div>
+            <% }) %>
+          </div>
         <% } %>
       </div>
     <% }) %>
