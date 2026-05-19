@@ -27,5 +27,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/wordguess.pablogeorge.org:latest
-            ghcr.io/${{ github.repository_owner }}/wordguess.pablogeorge.org:${{ github.sha }}
+            ghcr.io/pablo-george/wordguess.pablogeorge.org:latest
+            ghcr.io/pablo-george/wordguess.pablogeorge.org:${{ github.sha }}
