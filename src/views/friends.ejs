@@ -86,4 +86,13 @@
     <% }) %>
   </section>
 </div>
+<script>
+  var knownIncoming = <%= incoming.length %>;
+  setInterval(function() {
+    fetch('/friends/poll')
+      .then(function(r) { return r.json(); })
+      .then(function(d) { if (d.incoming !== knownIncoming) window.location.reload(); })
+      .catch(function() {});
+  }, 8000);
+</script>
 <%- include('footer') %>

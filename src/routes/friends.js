@@ -97,4 +97,13 @@ router.post('/friends/remove/:id', ensureAuth, (req, res) => {
   res.redirect('/friends');
 });
 
+router.get('/friends/poll', ensureAuth, (req, res) => {
+  const db = getDb();
+  const { c } = db.prepare(`
+    SELECT COUNT(*) as c FROM friends
+    WHERE friend_id = ? AND status = 'pending'
+  `).get(req.user.id);
+  res.json({ incoming: c });
+});
+
 module.exports = router;
