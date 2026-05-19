@@ -88,14 +88,13 @@ router.post('/friends/accept/:id', ensureAuth, (req, res) => {
   if (!friend) return res.status(404).json({ error: 'Request not found' });
 
   db.prepare('UPDATE friends SET status = ? WHERE id = ?').run('accepted', req.params.id);
-  res.json({ success: true });
+  res.redirect('/friends');
 });
 
 router.post('/friends/remove/:id', ensureAuth, (req, res) => {
   const db = getDb();
-  const result = db.prepare('DELETE FROM friends WHERE id = ? AND (user_id = ? OR friend_id = ?)').run(req.params.id, req.user.id, req.user.id);
-  if (result.changes === 0) return res.status(404).json({ error: 'Not found' });
-  res.json({ success: true });
+  db.prepare('DELETE FROM friends WHERE id = ? AND (user_id = ? OR friend_id = ?)').run(req.params.id, req.user.id, req.user.id);
+  res.redirect('/friends');
 });
 
 module.exports = router;
