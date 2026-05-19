@@ -62,7 +62,7 @@
       </div>
 
       <form id="battle-guess-form" class="guess-form" data-battle-id="<%= battle.id %>">
-        <input type="text" id="battle-guess-input" maxlength="5" autocomplete="off">
+        <input type="text" id="battle-guess-input" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
         <button type="submit" class="btn btn-primary">Guess</button>
       </form>
       <div id="battle-error" class="error-msg"></div>

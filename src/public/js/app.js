@@ -166,4 +166,30 @@
       setTimeout(function() { window.location.reload(); }, 10000);
     }
   }
+
+  // Hamburger menu
+  var burger = document.getElementById('nav-burger');
+  var navLinks = document.getElementById('nav-links');
+  if (burger && navLinks) {
+    burger.addEventListener('click', function() {
+      var expanded = burger.getAttribute('aria-expanded') === 'true';
+      burger.setAttribute('aria-expanded', String(!expanded));
+      navLinks.classList.toggle('open');
+    });
+    navLinks.querySelectorAll('a').forEach(function(link) {
+      link.addEventListener('click', function() {
+        burger.setAttribute('aria-expanded', 'false');
+        navLinks.classList.remove('open');
+      });
+    });
+  }
+
+  // Wrap leaderboard tables for horizontal scroll on mobile
+  document.querySelectorAll('.leaderboard').forEach(function(table) {
+    var wrapper = document.createElement('div');
+    wrapper.style.overflowX = 'auto';
+    wrapper.style.webkitOverflowScrolling = 'touch';
+    table.parentNode.insertBefore(wrapper, table);
+    wrapper.appendChild(table);
+  });
 })();

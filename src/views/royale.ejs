@@ -39,7 +39,7 @@
       </div>
       <h3>Round <%= game.current_round %></h3>
       <form id="royale-guess-form" class="guess-form" data-game-id="<%= game.id %>">
-        <input type="text" id="royale-guess-input" maxlength="5" autocomplete="off">
+        <input type="text" id="royale-guess-input" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
         <button type="submit" class="btn btn-primary">Guess</button>
       </form>
       <div id="royale-error" class="error-msg"></div>

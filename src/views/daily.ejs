@@ -34,7 +34,7 @@
     </div>
   <% } else { %>
     <form id="guess-form" class="guess-form">
-      <input type="text" id="guess-input" maxlength="<%= wordLength %>" autocomplete="off" autofocus>
+      <input type="text" id="guess-input" maxlength="<%= wordLength %>" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" autofocus>
       <button type="submit" class="btn btn-primary">Guess</button>
     </form>
     <div id="error-msg" class="error-msg"></div>
