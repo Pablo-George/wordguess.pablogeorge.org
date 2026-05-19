@@ -27,6 +27,7 @@
           <button type="submit" class="btn btn-primary">Join Game</button>
         </form>
       <% } else if (user.id === game.created_by) { %>
+        <span id="lobby-ping" data-type="knockout" data-id="<%= game.id %>" style="display:none"></span>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
           <% if (players.length >= 2) { %>
             <form action="/games/knockout/<%= game.id %>/start" method="POST">

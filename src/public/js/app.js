@@ -432,6 +432,23 @@
     }
   }
 
+  // Host lobby heartbeat — keeps lobby alive while host is on the page
+  var lobbyPing = document.getElementById('lobby-ping');
+  if (lobbyPing) {
+    var pingType = lobbyPing.getAttribute('data-type');
+    var pingId   = lobbyPing.getAttribute('data-id');
+    function sendPing() {
+      if (document.hidden) return;
+      fetch('/games/lobby-ping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: pingType, id: pingId })
+      }).catch(function() {});
+    }
+    sendPing();
+    setInterval(sendPing, 10000);
+  }
+
   // Hamburger menu
   var burger = document.getElementById('nav-burger');
   var navLinks = document.getElementById('nav-links');

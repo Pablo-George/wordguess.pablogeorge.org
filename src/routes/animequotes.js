@@ -73,10 +73,19 @@ router.post('/games/animequotes', ensureAuth, (req, res) => {
 });
 
 // GET /games/animequotes/:id
+function isLobbyStale(db, gameId) {
+  const hb = db.prepare("SELECT last_seen FROM lobby_heartbeats WHERE game_type = 'animequotes' AND game_id = ?").get(gameId);
+  if (!hb) return true;
+  return Date.now() - new Date(hb.last_seen + 'Z').getTime() > 25000;
+}
+
 router.get('/games/animequotes/:id', ensureAuth, (req, res) => {
   const db = getDb();
   const game = db.prepare('SELECT * FROM animequote_games WHERE id = ?').get(req.params.id);
-  if (!game) return res.status(404).send('Game not found');
+  if (!game) return res.redirect('/games');
+  if (game.status === 'waiting' && game.created_by !== req.user.id && isLobbyStale(db, game.id)) {
+    return res.redirect('/games');
+  }
 
   const players = db.prepare(`
     SELECT aqp.*, u.display_name, u.avatar_url

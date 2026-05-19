@@ -7,6 +7,34 @@ const { POKEMON_GEN1 } = require('../data/pokemon_gen1');
 const POKEMON_BY_LENGTH = [...POKEMON_GEN1].filter(p => p.length >= 5).sort((a, b) => a.length - b.length || a.localeCompare(b));
 
 const router = express.Router();
+const LOBBY_STALE_MS = 25000; // 25s — host pings every 10s so 2 missed pings = stale
+
+function isLobbyStale(db, type, gameId) {
+  const hb = db.prepare('SELECT last_seen FROM lobby_heartbeats WHERE game_type = ? AND game_id = ?').get(type, gameId);
+  if (!hb) return true;
+  return Date.now() - new Date(hb.last_seen + 'Z').getTime() > LOBBY_STALE_MS;
+}
+
+function cleanStaleLobbies(db) {
+  const threshold = "datetime('now', '-25 seconds')";
+  [
+    { type: 'pokemon',      gameTable: 'pokemon_games',    playerTable: 'pokemon_game_players' },
+    { type: 'knockout',     gameTable: 'knockout_games',   playerTable: 'knockout_players' },
+    { type: 'animequotes',  gameTable: 'animequote_games', playerTable: 'animequote_players' },
+  ].forEach(({ type, gameTable, playerTable }) => {
+    const stale = db.prepare(
+      `SELECT game_id FROM lobby_heartbeats WHERE game_type = ? AND last_seen < ${threshold}`
+    ).all(type).map(r => r.game_id);
+    for (const id of stale) {
+      const game = db.prepare(`SELECT id FROM ${gameTable} WHERE id = ? AND status = 'waiting'`).get(id);
+      if (game) {
+        db.prepare(`DELETE FROM ${playerTable} WHERE game_id = ?`).run(id);
+        db.prepare(`DELETE FROM ${gameTable} WHERE id = ?`).run(id);
+      }
+      db.prepare('DELETE FROM lobby_heartbeats WHERE game_type = ? AND game_id = ?').run(type, id);
+    }
+  });
+}
 
 function computeFeedback(guess, answer) {
   const result = [];
@@ -40,6 +68,7 @@ function computeFeedback(guess, answer) {
 // GET /games
 router.get('/games', ensureAuth, (req, res) => {
   const db = getDb();
+  cleanStaleLobbies(db);
 
   const friendIds = db.prepare(`
     SELECT CASE WHEN user_id = ? THEN friend_id ELSE user_id END as id
@@ -117,7 +146,10 @@ router.post('/games/pokemon', ensureAuth, (req, res) => {
 router.get('/games/pokemon/:id', ensureAuth, (req, res) => {
   const db = getDb();
   const game = db.prepare('SELECT * FROM pokemon_games WHERE id = ?').get(req.params.id);
-  if (!game) return res.status(404).send('Game not found');
+  if (!game) return res.redirect('/games');
+  if (game.status === 'waiting' && game.created_by !== req.user.id && isLobbyStale(db, 'pokemon', game.id)) {
+    return res.redirect('/games');
+  }
 
   const players = db.prepare(`
     SELECT pgp.*, u.display_name, u.avatar_url
@@ -180,6 +212,21 @@ router.post('/games/pokemon/:id/start', ensureAuth, (req, res) => {
   `).run(pokemonName, pokemonIndex, pokemonName.length, game.id);
 
   res.redirect('/games/pokemon/' + game.id);
+});
+
+// POST /games/lobby-ping — host heartbeat for waiting lobbies
+router.post('/games/lobby-ping', ensureAuth, (req, res) => {
+  const db = getDb();
+  const { type, id } = req.body;
+  const tables = { pokemon: 'pokemon_games', knockout: 'knockout_games', animequotes: 'animequote_games' };
+  if (!tables[type] || !id) return res.json({ ok: false });
+  const game = db.prepare(`SELECT * FROM ${tables[type]} WHERE id = ? AND status = 'waiting'`).get(id);
+  if (!game || game.created_by !== req.user.id) return res.json({ ok: false });
+  db.prepare(`
+    INSERT INTO lobby_heartbeats (game_type, game_id, last_seen) VALUES (?, ?, datetime('now'))
+    ON CONFLICT (game_type, game_id) DO UPDATE SET last_seen = datetime('now')
+  `).run(type, id);
+  res.json({ ok: true });
 });
 
 // GET /games/pokemon/:id/players — lightweight status poll

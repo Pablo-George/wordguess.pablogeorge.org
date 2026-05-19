@@ -27,6 +27,7 @@
           <button type="submit" class="btn btn-primary">Join Game</button>
         </form>
       <% } else if (user.id === game.created_by) { %>
+        <span id="lobby-ping" data-type="animequotes" data-id="<%= game.id %>" style="display:none"></span>
         <p class="text-sm" style="margin-bottom:0.75rem">
           <%= players.length %> player<%= players.length !== 1 ? 's' : '' %> →
           quote will be ~<%= [8,10,12,14,16,18,20][Math.min(players.length-1,6)] %> words

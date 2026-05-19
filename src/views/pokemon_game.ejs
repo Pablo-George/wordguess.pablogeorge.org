@@ -25,6 +25,7 @@
           <button type="submit" class="btn btn-primary">Join Game</button>
         </form>
       <% } else if (user.id === game.created_by) { %>
+        <span id="lobby-ping" data-type="pokemon" data-id="<%= game.id %>" style="display:none"></span>
         <p class="text-sm" style="margin-bottom:0.75rem">
           With <%= players.length %> player<%= players.length !== 1 ? 's' : '' %>, the name will be <strong><%= previewLength %> letters</strong>. More players = longer name.
         </p>
