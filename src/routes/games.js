@@ -3,6 +3,9 @@ const { getDb } = require('../db/database');
 const { ensureAuth } = require('../services/authService');
 const { POKEMON_GEN1 } = require('../data/pokemon_gen1');
 
+// Sorted by name length ascending so more players = longer (harder) name
+const POKEMON_BY_LENGTH = [...POKEMON_GEN1].sort((a, b) => a.length - b.length || a.localeCompare(b));
+
 const router = express.Router();
 
 function computeFeedback(guess, answer) {
@@ -83,6 +86,8 @@ router.get('/games/pokemon/:id', ensureAuth, (req, res) => {
   const outOfGuesses = !!(myPlayer && !myPlayer.solved && myPlayer.guesses_count >= game.max_guesses);
   const showAnswer = solved || outOfGuesses || game.status === 'completed';
 
+  const previewLength = POKEMON_BY_LENGTH[Math.min(players.length - 1, POKEMON_BY_LENGTH.length - 1)]?.length || 0;
+
   res.render('pokemon_game', {
     title: 'Pokémon Game',
     game,
@@ -94,7 +99,7 @@ router.get('/games/pokemon/:id', ensureAuth, (req, res) => {
     maxGuesses: game.max_guesses,
     wordLength: game.word_length || 0,
     answer: showAnswer ? game.pokemon_name : null,
-    pokemonIndex: game.pokemon_index,
+    previewLength,
   });
 });
 
@@ -116,8 +121,8 @@ router.post('/games/pokemon/:id/start', ensureAuth, (req, res) => {
   }
 
   const { c: playerCount } = db.prepare('SELECT COUNT(*) as c FROM pokemon_game_players WHERE game_id = ?').get(game.id);
-  const pokemonIndex = (playerCount - 1) % POKEMON_GEN1.length;
-  const pokemonName = POKEMON_GEN1[pokemonIndex];
+  const pokemonIndex = Math.min(playerCount - 1, POKEMON_BY_LENGTH.length - 1);
+  const pokemonName = POKEMON_BY_LENGTH[pokemonIndex];
 
   db.prepare(`
     UPDATE pokemon_games SET status = 'active', pokemon_name = ?, pokemon_index = ?, word_length = ? WHERE id = ?

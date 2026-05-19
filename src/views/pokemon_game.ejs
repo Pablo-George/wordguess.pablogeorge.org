@@ -26,7 +26,7 @@
         </form>
       <% } else if (user.id === game.created_by) { %>
         <p class="text-sm" style="margin-bottom:0.75rem">
-          The Pokémon will be <strong>#<%= ((players.length - 1) % 151) + 1 %></strong> in the Pokédex based on current player count.
+          With <%= players.length %> player<%= players.length !== 1 ? 's' : '' %>, the name will be <strong><%= previewLength %> letters</strong>. More players = longer name.
         </p>
         <form action="/games/pokemon/<%= game.id %>/start" method="POST">
           <button type="submit" class="btn btn-primary">Start Game</button>
