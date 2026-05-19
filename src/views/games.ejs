@@ -24,18 +24,13 @@
         </form>
       </div>
 
-      <div class="game-mode-card game-mode-card--dim">
-        <div class="game-mode-label">Teams</div>
-        <h3>Team Battle</h3>
-        <p class="text-sm">Two teams race to guess the same word first.</p>
-        <a href="/battles/new" class="btn" style="margin-top:auto">Create Battle</a>
-      </div>
-
-      <div class="game-mode-card game-mode-card--dim">
-        <div class="game-mode-label">Survive</div>
-        <h3>Battle Royale</h3>
-        <p class="text-sm">Last player standing wins. Wrong guesses eliminate you.</p>
-        <a href="/royale/new" class="btn" style="margin-top:auto">Create Royale</a>
+      <div class="game-mode-card">
+        <div class="game-mode-label">Elimination</div>
+        <h3>Knockout</h3>
+        <p class="text-sm">Back-to-back Wordles. 3 minutes per round. Lowest scorer each round is eliminated. Last one standing wins.</p>
+        <form action="/games/knockout" method="POST" style="margin-top:auto">
+          <button type="submit" class="btn btn-primary">Create Game</button>
+        </form>
       </div>
 
     </div>

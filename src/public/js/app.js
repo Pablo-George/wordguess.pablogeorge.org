@@ -56,6 +56,29 @@
     });
   }
 
+  // Knockout guesses
+  var knockoutForm = document.getElementById('knockout-guess-form');
+  if (knockoutForm) {
+    knockoutForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var input = document.getElementById('knockout-guess-input');
+      var guess = input.value.trim().toUpperCase();
+      if (guess.length !== 5) return;
+      var gameId = knockoutForm.getAttribute('data-game-id');
+      fetch('/games/knockout/' + gameId + '/guess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guess: guess })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) { document.getElementById('knockout-error').textContent = data.error; return; }
+        window.location.reload();
+      })
+      .catch(function() { document.getElementById('knockout-error').textContent = 'Error'; });
+    });
+  }
+
   // Pokemon game guesses
   var pokemonForm = document.getElementById('pokemon-guess-form');
   if (pokemonForm) {

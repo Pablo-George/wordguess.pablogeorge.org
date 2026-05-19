@@ -1,0 +1,182 @@
+<%- include('header') %>
+<div class="knockout-page">
+
+  <h1>Knockout</h1>
+  <p class="puzzle-date">Game #<%= game.id %></p>
+
+  <%# ── WAITING ─────────────────────────────── %>
+  <% if (game.status === 'waiting') { %>
+
+    <section class="dash-section">
+      <h2>Waiting for players</h2>
+      <p class="text-sm" style="margin-bottom:0.75rem">Share this game ID:</p>
+      <div class="game-code"><%= game.id %></div>
+
+      <div class="member-list" style="margin:1.5rem 0">
+        <% players.forEach(function(p) { %>
+          <div class="member-card">
+            <img src="<%= p.avatar_url || '' %>" alt="" class="member-avatar" onerror="this.style.display='none'">
+            <div class="member-info"><strong><%= p.display_name %></strong></div>
+            <% if (p.user_id === game.created_by) { %><span class="badge">Host</span><% } %>
+          </div>
+        <% }) %>
+      </div>
+
+      <% if (!myPlayer) { %>
+        <form action="/games/knockout/<%= game.id %>/join" method="POST">
+          <button type="submit" class="btn btn-primary">Join Game</button>
+        </form>
+      <% } else if (user.id === game.created_by) { %>
+        <form action="/games/knockout/<%= game.id %>/start" method="POST">
+          <button type="submit" class="btn btn-primary">Start Game</button>
+        </form>
+      <% } else { %>
+        <p class="text-sm">Waiting for the host to start...</p>
+      <% } %>
+    </section>
+
+    <script>setTimeout(function() { window.location.reload(); }, 3000);</script>
+
+  <%# ── ACTIVE ──────────────────────────────── %>
+  <% } else if (game.status === 'active') { %>
+
+    <div class="knockout-header">
+      <div class="round-badge">Round <%= game.current_round %></div>
+      <div class="round-timer" id="round-timer" data-ends="<%= game.round_ends_at %>">
+        <span id="timer-display">3:00</span>
+      </div>
+    </div>
+
+    <%# Previous round results banner %>
+    <% if (prevRoundResults) { %>
+      <div class="prev-round-banner">
+        <strong>Round <%= prevRoundResults.roundNumber %> — <%= prevRoundResults.word %></strong>
+        <% if (prevRoundResults.eliminated.length > 0) { %>
+          <span class="elim-notice">
+            Eliminated: <%= prevRoundResults.eliminated.map(function(p){ return p.display_name; }).join(', ') %>
+          </span>
+        <% } %>
+      </div>
+    <% } %>
+
+    <% if (isEliminated) { %>
+      <div class="result-message fail">You were eliminated in round <%= myPlayer.eliminated_round %>. Watching round <%= game.current_round %>...</div>
+    <% } %>
+
+    <%# My board %>
+    <% if (myGuesses.length > 0 || (!myDone && !isEliminated)) { %>
+      <div class="board" id="knockout-board">
+        <% myGuesses.forEach(function(g) { %>
+          <div class="row">
+            <% g.result.forEach(function(r) { %>
+              <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
+            <% }) %>
+          </div>
+        <% }) %>
+        <% if (!myDone && !isEliminated) { %>
+          <% for (var i = myGuesses.length; i < maxGuesses; i++) { %>
+            <div class="row">
+              <% for (var j = 0; j < 5; j++) { %><div class="tile tile-empty"></div><% } %>
+            </div>
+          <% } %>
+        <% } %>
+      </div>
+    <% } %>
+
+    <% if (!myDone && !isEliminated) { %>
+      <form id="knockout-guess-form" class="guess-form" data-game-id="<%= game.id %>">
+        <input type="text" id="knockout-guess-input" maxlength="5"
+          autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" autofocus>
+        <button type="submit" class="btn btn-primary">Guess</button>
+      </form>
+      <div id="knockout-error" class="error-msg"></div>
+    <% } else if (mySolved) { %>
+      <div class="result-message win">
+        Solved in <%= myRoundScore.guesses_count %> guess<%= myRoundScore.guesses_count !== 1 ? 'es' : '' %>! +<%= myRoundScore.score %> pts — waiting for others...
+      </div>
+    <% } else if (myDone && !mySolved && !isEliminated) { %>
+      <div class="result-message fail">Out of guesses — waiting for round to end...</div>
+    <% } %>
+
+    <%# Player status %>
+    <section class="dash-section" style="margin-top:2rem">
+      <h2>Players — Round <%= game.current_round %></h2>
+      <div class="player-status-list">
+        <% players.forEach(function(p) { %>
+          <% var rs = null; %>
+          <%# We can't do DB calls in EJS, so roundScore is passed per player via the view — use total_score display %>
+          <div class="player-status-item <%= p.status === 'eliminated' ? 'failed' : '' %>">
+            <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+            <span style="flex:1"><%= p.display_name %></span>
+            <% if (p.status === 'eliminated') { %>
+              <span class="badge dead">Eliminated R<%= p.eliminated_round %></span>
+            <% } else { %>
+              <span class="text-sm"><%= p.total_score %> pts</span>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+
+    <script>
+    (function() {
+      var timerEl = document.getElementById('timer-display');
+      var container = document.getElementById('round-timer');
+      var endsAt = new Date(container.getAttribute('data-ends')).getTime();
+
+      function update() {
+        var diff = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+        var m = Math.floor(diff / 60);
+        var s = diff % 60;
+        timerEl.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+        if (diff <= 30) timerEl.style.color = 'var(--pink)';
+        if (diff <= 0) { clearInterval(iv); window.location.reload(); }
+      }
+      var iv = setInterval(update, 500);
+      update();
+    })();
+    <% if (myDone || isEliminated) { %>
+    setTimeout(function() { window.location.reload(); }, 5000);
+    <% } %>
+    </script>
+
+  <%# ── COMPLETED ────────────────────────────── %>
+  <% } else if (game.status === 'completed') { %>
+
+    <% var winner = players.find(function(p) { return p.user_id === game.winner_id; }); %>
+    <% if (winner) { %>
+      <div class="result-message win" style="text-align:center;font-size:1.1rem;padding:1.5rem">
+        <%= winner.display_name %> wins!
+      </div>
+    <% } %>
+
+    <section class="dash-section">
+      <h2>Final Standings</h2>
+      <div class="player-status-list">
+        <% players.forEach(function(p, i) { %>
+          <div class="player-status-item <%= p.user_id === game.winner_id ? 'solved' : '' %>">
+            <span class="text-sm" style="width:1.5rem;text-align:center"><%= i + 1 %></span>
+            <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+            <span style="flex:1"><%= p.display_name %></span>
+            <% if (p.user_id === game.winner_id) { %>
+              <span class="badge winner">Winner</span>
+            <% } else { %>
+              <span class="badge dead">Eliminated R<%= p.eliminated_round %></span>
+            <% } %>
+            <span class="text-sm" style="margin-left:0.5rem"><%= p.total_score %> pts</span>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem">
+      <form action="/games/knockout" method="POST">
+        <button type="submit" class="btn btn-primary">Play Again</button>
+      </form>
+      <a href="/games" class="btn">Back to Games</a>
+    </div>
+
+  <% } %>
+
+</div>
+<%- include('footer') %>
