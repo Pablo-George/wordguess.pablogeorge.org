@@ -778,6 +778,82 @@ code {
   margin-bottom: 1rem;
 }
 
+/* ── GAMES LOBBY ─────────────────────────────── */
+.game-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.game-mode-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: 2px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.game-mode-card--dim { border-top-color: var(--border); }
+
+.game-mode-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+
+.game-mode-card h3 {
+  font-size: 1.3rem;
+  letter-spacing: 1px;
+  color: var(--text);
+  margin-bottom: 0;
+}
+
+/* ── POKEMON GAME ─────────────────────────────── */
+.pokemon-board {
+  margin: 1.5rem auto;
+}
+
+/* Scale tiles for longer names */
+.pokemon-board[data-length="7"] .tile { width: 52px; height: 52px; font-size: 1.7rem; }
+.pokemon-board[data-length="8"] .tile { width: 48px; height: 48px; font-size: 1.55rem; }
+.pokemon-board[data-length="9"] .tile { width: 44px; height: 44px; font-size: 1.4rem; }
+.pokemon-board[data-length="10"] .tile { width: 40px; height: 40px; font-size: 1.25rem; }
+
+.game-code {
+  font-family: var(--font-display);
+  font-size: 3.5rem;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  text-align: center;
+  padding: 1rem 1.5rem;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 2px;
+  margin: 0.5rem 0;
+}
+
+.player-status-list { display: grid; gap: 0.4rem; margin: 0.5rem 0; }
+
+.player-status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-size: 0.84rem;
+  transition: border-color 0.15s;
+}
+
+.player-status-item.solved { border-color: var(--green); }
+.player-status-item.failed { opacity: 0.45; }
+
 /* ── HAMBURGER ───────────────────────────────── */
 .nav-burger {
   display: none;
@@ -886,6 +962,12 @@ code {
 
   /* Battle tiles */
   .guess-row .tile { width: 40px; height: 40px; font-size: 1.2rem; }
+
+  /* Pokemon board — scale for long names on small screens */
+  .pokemon-board[data-length="7"] .tile  { width: 44px; height: 44px; font-size: 1.4rem; }
+  .pokemon-board[data-length="8"] .tile  { width: 38px; height: 38px; font-size: 1.2rem; }
+  .pokemon-board[data-length="9"] .tile  { width: 34px; height: 34px; font-size: 1.1rem; }
+  .pokemon-board[data-length="10"] .tile { width: 30px; height: 30px; font-size: 0.95rem; }
 
   /* Leaderboard */
   .leaderboard { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }

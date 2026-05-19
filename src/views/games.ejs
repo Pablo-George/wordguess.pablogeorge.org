@@ -1,0 +1,65 @@
+<%- include('header') %>
+<div class="games-lobby">
+  <h1>Games</h1>
+
+  <section class="dash-section">
+    <h2>Join a Game</h2>
+    <form id="join-game-form" class="inline-form">
+      <input type="text" id="join-game-id" placeholder="Enter game ID" maxlength="10" inputmode="numeric" style="width:160px">
+      <button type="submit" class="btn btn-primary">Join</button>
+    </form>
+    <p class="text-sm">Get the game ID from a friend</p>
+  </section>
+
+  <section class="dash-section">
+    <h2>Game Modes</h2>
+    <div class="game-mode-grid">
+
+      <div class="game-mode-card">
+        <div class="game-mode-label">Gen 1</div>
+        <h3>Pokémon Name</h3>
+        <p class="text-sm">Guess the mystery Pokémon. The Pokémon chosen depends on how many players join — so recruit wisely.</p>
+        <form action="/games/pokemon" method="POST" style="margin-top:auto">
+          <button type="submit" class="btn btn-primary">Create Game</button>
+        </form>
+      </div>
+
+      <div class="game-mode-card game-mode-card--dim">
+        <div class="game-mode-label">Teams</div>
+        <h3>Team Battle</h3>
+        <p class="text-sm">Two teams race to guess the same word first.</p>
+        <a href="/battles/new" class="btn" style="margin-top:auto">Create Battle</a>
+      </div>
+
+      <div class="game-mode-card game-mode-card--dim">
+        <div class="game-mode-label">Survive</div>
+        <h3>Battle Royale</h3>
+        <p class="text-sm">Last player standing wins. Wrong guesses eliminate you.</p>
+        <a href="/royale/new" class="btn" style="margin-top:auto">Create Royale</a>
+      </div>
+
+    </div>
+  </section>
+
+  <% if (myGames && myGames.length > 0) { %>
+  <section class="dash-section">
+    <h2>My Active Games</h2>
+    <% myGames.forEach(function(g) { %>
+      <div class="dash-card">
+        <strong>Pokémon Game <span class="text-sm">#<%= g.id %></span></strong>
+        <span class="text-sm"><%= g.player_count %> player<%= g.player_count !== 1 ? 's' : '' %> • <%= g.status %></span>
+        <a href="/games/pokemon/<%= g.id %>" class="btn btn-sm">Resume</a>
+      </div>
+    <% }) %>
+  </section>
+  <% } %>
+</div>
+
+<script>
+  document.getElementById('join-game-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var id = document.getElementById('join-game-id').value.trim();
+    if (id) window.location.href = '/games/pokemon/' + id;
+  });
+</script>
+<%- include('footer') %>

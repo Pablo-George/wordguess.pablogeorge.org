@@ -56,6 +56,32 @@
     });
   }
 
+  // Pokemon game guesses
+  var pokemonForm = document.getElementById('pokemon-guess-form');
+  if (pokemonForm) {
+    pokemonForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var input = document.getElementById('pokemon-guess-input');
+      var guess = input.value.trim().toUpperCase().replace(/[^A-Z]/g, '');
+      if (!guess.length) return;
+      var gameId = pokemonForm.getAttribute('data-game-id');
+      fetch('/games/pokemon/' + gameId + '/guess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guess: guess })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) {
+          document.getElementById('pokemon-error').textContent = data.error;
+          return;
+        }
+        window.location.reload();
+      })
+      .catch(function() { document.getElementById('pokemon-error').textContent = 'Error'; });
+    });
+  }
+
   // Royale guesses
   var royaleForm = document.getElementById('royale-guess-form');
   if (royaleForm) {

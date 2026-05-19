@@ -1,0 +1,122 @@
+<%- include('header') %>
+<div class="pokemon-game-page">
+
+  <h1>Pokémon Name</h1>
+  <p class="puzzle-date">Game #<%= game.id %></p>
+
+  <% if (game.status === 'waiting') { %>
+    <section class="dash-section">
+      <h2>Waiting for players</h2>
+      <p class="text-sm" style="margin-bottom:1rem">Share this game ID with friends:</p>
+      <div class="game-code"><%= game.id %></div>
+
+      <div class="member-list" style="margin:1.5rem 0">
+        <% players.forEach(function(p) { %>
+          <div class="member-card">
+            <img src="<%= p.avatar_url || '' %>" alt="" class="member-avatar" onerror="this.style.display='none'">
+            <div class="member-info"><strong><%= p.display_name %></strong></div>
+            <% if (p.user_id === game.created_by) { %><span class="badge">Host</span><% } %>
+          </div>
+        <% }) %>
+      </div>
+
+      <% if (!myPlayer) { %>
+        <form action="/games/pokemon/<%= game.id %>/join" method="POST">
+          <button type="submit" class="btn btn-primary">Join Game</button>
+        </form>
+      <% } else if (user.id === game.created_by) { %>
+        <p class="text-sm" style="margin-bottom:0.75rem">
+          The Pokémon will be <strong>#<%= ((players.length - 1) % 151) + 1 %></strong> in the Pokédex based on current player count.
+        </p>
+        <form action="/games/pokemon/<%= game.id %>/start" method="POST">
+          <button type="submit" class="btn btn-primary">Start Game</button>
+        </form>
+      <% } else { %>
+        <p class="text-sm">Waiting for the host to start...</p>
+      <% } %>
+    </section>
+  <% } %>
+
+  <% if (game.status === 'active' || game.status === 'completed') { %>
+    <p class="puzzle-date"><%= wordLength %> letters • Gen 1 Pokémon</p>
+
+    <div class="board pokemon-board" id="pokemon-board" data-length="<%= wordLength %>">
+      <% myGuesses.forEach(function(g) { %>
+        <div class="row">
+          <% g.result.forEach(function(r) { %>
+            <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
+          <% }) %>
+        </div>
+      <% }) %>
+      <% if (!solved && !outOfGuesses) { %>
+        <% for (var i = myGuesses.length; i < maxGuesses; i++) { %>
+          <div class="row">
+            <% for (var j = 0; j < wordLength; j++) { %>
+              <div class="tile tile-empty"></div>
+            <% } %>
+          </div>
+        <% } %>
+      <% } %>
+    </div>
+
+    <% if (solved) { %>
+      <div class="result-message win">
+        You got it in <%= myGuesses.length %> guess<%= myGuesses.length !== 1 ? 'es' : '' %>! +<%= myPlayer.score %> pts
+      </div>
+    <% } else if (outOfGuesses) { %>
+      <div class="result-message fail">
+        Out of guesses! The Pokémon was <strong><%= answer %></strong>
+      </div>
+    <% } else if (game.status === 'completed') { %>
+      <div class="result-message fail">
+        Game over! The Pokémon was <strong><%= answer %></strong>
+      </div>
+    <% } else { %>
+      <form id="pokemon-guess-form" class="guess-form" data-game-id="<%= game.id %>">
+        <input type="text" id="pokemon-guess-input" maxlength="<%= wordLength %>"
+          autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" autofocus>
+        <button type="submit" class="btn btn-primary">Guess</button>
+      </form>
+      <div id="pokemon-error" class="error-msg"></div>
+    <% } %>
+
+    <section class="dash-section" style="margin-top:2rem">
+      <h2>Players</h2>
+      <div class="player-status-list">
+        <% players.forEach(function(p) { %>
+          <div class="player-status-item <%= p.solved ? 'solved' : (p.guesses_count >= maxGuesses ? 'failed' : '') %>">
+            <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+            <span style="flex:1"><%= p.display_name %></span>
+            <% if (p.solved) { %>
+              <span class="badge winner"><%= p.guesses_count %> guess<%= p.guesses_count !== 1 ? 'es' : '' %></span>
+              <span class="badge" style="background:transparent;color:var(--accent)">+<%= p.score %>pts</span>
+            <% } else if (p.guesses_count >= maxGuesses) { %>
+              <span class="badge dead">Out</span>
+            <% } else { %>
+              <span class="text-sm"><%= p.guesses_count %>/<%= maxGuesses %></span>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+
+    <% if (game.status === 'completed') { %>
+      <div style="text-align:center;margin-top:1.5rem;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+        <form action="/games/pokemon" method="POST">
+          <button type="submit" class="btn btn-primary">Play Again</button>
+        </form>
+        <a href="/games" class="btn">Back to Games</a>
+      </div>
+    <% } %>
+  <% } %>
+
+</div>
+
+<% if (game.status === 'waiting' && myPlayer) { %>
+<script>setTimeout(function() { window.location.reload(); }, 4000);</script>
+<% } %>
+<% if (game.status === 'active' && !solved && !outOfGuesses) { %>
+<script>setTimeout(function() { window.location.reload(); }, 8000);</script>
+<% } %>
+
+<%- include('footer') %>

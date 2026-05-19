@@ -87,16 +87,14 @@ app.use(loadUser);
 const authRoutes = require('./routes/auth');
 const dailyRoutes = require('./routes/daily');
 const friendRoutes = require('./routes/friends');
-const groupRoutes = require('./routes/groups');
-const sessionRoutes = require('./routes/sessions');
+const gamesRoutes = require('./routes/games');
 const battleRoutes = require('./routes/battles');
 const royaleRoutes = require('./routes/royale');
 
 app.use(authRoutes);
 app.use(dailyRoutes);
 app.use(friendRoutes);
-app.use(groupRoutes);
-app.use(sessionRoutes);
+app.use(gamesRoutes);
 app.use(battleRoutes);
 app.use(royaleRoutes);
 
@@ -109,28 +107,20 @@ app.get('/', (req, res) => {
 
   const todayAttempt = db.prepare('SELECT * FROM daily_attempts WHERE user_id = ? AND puzzle_date = ?').get(req.user.id, todayStr);
 
-  const activeSessions = db.prepare(`
-    SELECT s.*, g.name as group_name
-    FROM sessions s
-    JOIN groups g ON g.id = s.group_id
-    JOIN group_members gm ON gm.group_id = s.group_id AND gm.user_id = ?
-    WHERE s.start_date <= ? AND s.end_date >= ?
-    ORDER BY s.end_date ASC
-  `).all(req.user.id, todayStr, todayStr);
-
-  const groups = db.prepare(`
-    SELECT g.*, gm.role,
-      (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as member_count
-    FROM groups g
-    JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = ?
-    ORDER BY g.created_at DESC
+  const activeGames = db.prepare(`
+    SELECT pg.*,
+      (SELECT COUNT(*) FROM pokemon_game_players WHERE game_id = pg.id) as player_count
+    FROM pokemon_games pg
+    JOIN pokemon_game_players pgp ON pgp.game_id = pg.id AND pgp.user_id = ?
+    WHERE pg.status != 'completed'
+    ORDER BY pg.created_at DESC
+    LIMIT 5
   `).all(req.user.id);
 
   res.render('index', {
     title: 'Dashboard',
     todayAttempt,
-    activeSessions,
-    groups,
+    activeGames,
   });
 });
 

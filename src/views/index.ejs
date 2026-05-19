@@ -18,35 +18,19 @@
     </div>
   </section>
 
-  <div class="dash-grid">
-    <section class="dash-section">
-      <h2>Active Sessions</h2>
-      <% if (activeSessions.length === 0) { %>
-        <p class="empty">No active sessions</p>
-      <% } %>
-      <% activeSessions.forEach(function(s) { %>
-        <div class="dash-card">
-          <strong><%= s.name %></strong>
-          <span class="text-sm"><%= s.group_name %></span>
-          <span class="text-sm"><%= s.start_date %> - <%= s.end_date %></span>
-          <a href="/sessions/<%= s.id %>" class="btn btn-sm">View</a>
-        </div>
-      <% }) %>
-    </section>
-
-    <section class="dash-section">
-      <h2>Your Groups</h2>
-      <% if (groups.length === 0) { %>
-        <p class="empty">No groups yet</p>
-      <% } %>
-      <% groups.forEach(function(g) { %>
-        <div class="dash-card">
-          <strong><%= g.name %></strong>
-          <span class="text-sm"><%= g.member_count %> members</span>
-          <a href="/groups/<%= g.id %>" class="btn btn-sm">Open</a>
-        </div>
-      <% }) %>
-    </section>
-  </div>
+  <section class="dash-section">
+    <h2>Active Pokémon Games</h2>
+    <% if (activeGames.length === 0) { %>
+      <p class="empty">No active games — <a href="/games">start one</a></p>
+    <% } %>
+    <% activeGames.forEach(function(g) { %>
+      <div class="dash-card">
+        <strong>Game #<%= g.id %></strong>
+        <span class="text-sm"><%= g.player_count %> player<%= g.player_count !== 1 ? 's' : '' %> • <%= g.status %></span>
+        <a href="/games/pokemon/<%= g.id %>" class="btn btn-sm">Resume</a>
+      </div>
+    <% }) %>
+    <a href="/games" class="btn btn-sm" style="margin-top:0.5rem">Browse Games</a>
+  </section>
 </div>
 <%- include('footer') %>
