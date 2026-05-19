@@ -1,4 +1,12 @@
 (function() {
+  // Prevent pinch zoom (Safari ignores the viewport meta tag since iOS 10)
+  document.addEventListener('touchmove', function(e) {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('gesturestart', function(e) {
+    e.preventDefault();
+  });
+
   // Daily puzzle guesses
   var guessForm = document.getElementById('guess-form');
   if (guessForm) {
