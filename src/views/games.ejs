@@ -4,25 +4,27 @@
 
   <section class="dash-section">
     <h2>Friend Lobbies</h2>
-    <% if (openLobbies.length === 0) { %>
-      <p class="empty">No open lobbies from friends right now</p>
-    <% } else { %>
-      <% var typeNames = { pokemon: 'Pokémon Name', knockout: 'Knockout', animequotes: 'Anime Quote' }; %>
-      <% var joinUrls = { pokemon: '/games/pokemon/', knockout: '/games/knockout/', animequotes: '/games/animequotes/' }; %>
-      <% openLobbies.forEach(function(g) { %>
-        <div class="dash-card">
-          <div style="display:flex;align-items:center;gap:0.6rem;flex:1">
-            <img src="<%= g.host_avatar || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
-            <div>
-              <strong><%= g.host_name %>'s <%= typeNames[g.type] %></strong>
-              <% if (g.subtitle) { %><span class="text-sm" style="display:block"><%= g.subtitle %></span><% } %>
-              <span class="text-sm"><%= g.player_count %> player<%= g.player_count !== 1 ? 's' : '' %> in lobby</span>
+    <div id="lobbies-list">
+      <% if (openLobbies.length === 0) { %>
+        <p class="empty">No open lobbies from friends right now</p>
+      <% } else { %>
+        <% var typeNames = { pokemon: 'Pokémon Name', knockout: 'Knockout', animequotes: 'Anime Quote' }; %>
+        <% var joinUrls = { pokemon: '/games/pokemon/', knockout: '/games/knockout/', animequotes: '/games/animequotes/' }; %>
+        <% openLobbies.forEach(function(g) { %>
+          <div class="dash-card">
+            <div style="display:flex;align-items:center;gap:0.6rem;flex:1">
+              <img src="<%= g.host_avatar || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+              <div>
+                <strong><%= g.host_name %>'s <%= typeNames[g.type] %></strong>
+                <% if (g.subtitle) { %><span class="text-sm" style="display:block"><%= g.subtitle %></span><% } %>
+                <span class="text-sm"><%= g.player_count %> player<%= g.player_count !== 1 ? 's' : '' %> in lobby</span>
+              </div>
             </div>
+            <a href="<%= joinUrls[g.type] %><%= g.id %>" class="btn btn-primary btn-sm">Join</a>
           </div>
-          <a href="<%= joinUrls[g.type] %><%= g.id %>" class="btn btn-primary btn-sm">Join</a>
-        </div>
-      <% }) %>
-    <% } %>
+        <% }) %>
+      <% } %>
+    </div>
   </section>
 
   <section class="dash-section">
@@ -78,4 +80,44 @@
   <% } %>
 </div>
 
+<script>
+  var typeNames = { pokemon: 'Pokémon Name', knockout: 'Knockout', animequotes: 'Anime Quote' };
+  var joinUrls  = { pokemon: '/games/pokemon/', knockout: '/games/knockout/', animequotes: '/games/animequotes/' };
+  var knownIds  = '<%= openLobbies.map(function(g){return g.type+g.id}).join(",") %>';
+
+  function renderLobbies(lobbies) {
+    var el = document.getElementById('lobbies-list');
+    if (!lobbies.length) {
+      el.innerHTML = '<p class="empty">No open lobbies from friends right now</p>';
+      return;
+    }
+    el.innerHTML = lobbies.map(function(g) {
+      return '<div class="dash-card">' +
+        '<div style="display:flex;align-items:center;gap:0.6rem;flex:1">' +
+          '<img src="' + (g.host_avatar || '') + '" alt="" class="mini-avatar" onerror="this.style.display=\'none\'">' +
+          '<div>' +
+            '<strong>' + g.host_name + '\'s ' + (typeNames[g.type] || g.type) + '</strong>' +
+            (g.subtitle ? '<span class="text-sm" style="display:block">' + g.subtitle + '</span>' : '') +
+            '<span class="text-sm">' + g.player_count + ' player' + (g.player_count !== 1 ? 's' : '') + ' in lobby</span>' +
+          '</div>' +
+        '</div>' +
+        '<a href="' + joinUrls[g.type] + g.id + '" class="btn btn-primary btn-sm">Join</a>' +
+      '</div>';
+    }).join('');
+  }
+
+  setInterval(function() {
+    if (document.hidden) return;
+    fetch('/games/lobbies')
+      .then(function(r) { return r.json(); })
+      .then(function(lobbies) {
+        var newIds = lobbies.map(function(g) { return g.type + g.id; }).join(',');
+        if (newIds !== knownIds) {
+          knownIds = newIds;
+          renderLobbies(lobbies);
+        }
+      })
+      .catch(function() {});
+  }, 5000);
+</script>
 <%- include('footer') %>
