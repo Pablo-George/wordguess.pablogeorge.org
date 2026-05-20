@@ -73,6 +73,7 @@
           </span>
         <% } else { %>
           <button class="aq-word aq-word--unsolved <%= activeWord && activeWord.id === w.id ? 'aq-word--active' : '' %>"
+            data-word-id="<%= w.id %>"
             onclick="window.location.href='?w=<%= w.id %>'">
             <% for (var k = 0; k < w.word_length; k++) { %><span class="aq-blank"></span><% } %>
           </button>

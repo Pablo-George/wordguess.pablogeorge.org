@@ -27,11 +27,6 @@ async function isValidWord(word) {
 
   if (validCache.has(upper)) return validCache.get(upper);
 
-  if (upper.length !== 5) {
-    validCache.set(upper, false);
-    return false;
-  }
-
   try {
     const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(upper.toLowerCase())}`);
     if (res.status === 200) {
@@ -43,6 +38,7 @@ async function isValidWord(word) {
   } catch {
   }
 
+  // Fallback: allow any word in the answers list (5-letter games)
   const fallback = ANSWERS.includes(upper);
   validCache.set(upper, fallback);
   return fallback;

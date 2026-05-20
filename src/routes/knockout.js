@@ -3,6 +3,7 @@ const { getDb } = require('../db/database');
 const { ensureAuth } = require('../services/authService');
 const { ANSWERS } = require('../data/answers');
 const { isValidWord } = require('../services/wordService');
+const { publish, subscribe } = require('../services/gameEvents');
 
 const router = express.Router();
 const MAX_GUESSES = 6;
@@ -258,7 +259,38 @@ router.post('/games/knockout/:id/guess', ensureAuth, async (req, res) => {
     if (allDone) endRound(db, game, round);
   }
 
+  publish('knockout:' + game.id, knockoutGameState(db, game.id));
   res.json({ ok: true });
+});
+
+function knockoutGameState(db, gameId) {
+  const game = db.prepare('SELECT * FROM knockout_games WHERE id = ?').get(gameId);
+  if (!game) return null;
+  const players = db.prepare(`
+    SELECT kp.user_id, u.display_name, u.avatar_url, kp.status, kp.eliminated_round, kp.total_score,
+      (SELECT krs.solved FROM knockout_round_scores krs WHERE krs.game_id = ? AND krs.user_id = kp.user_id AND krs.round_id = (SELECT id FROM knockout_rounds WHERE game_id = ? AND round_number = ? LIMIT 1)) as round_solved,
+      (SELECT COUNT(*) FROM knockout_guesses kg WHERE kg.game_id = ? AND kg.user_id = kp.user_id AND kg.round_id = (SELECT id FROM knockout_rounds WHERE game_id = ? AND round_number = ? LIMIT 1)) as round_guesses
+    FROM knockout_players kp JOIN users u ON u.id = kp.user_id
+    WHERE kp.game_id = ? ORDER BY kp.total_score DESC
+  `).all(gameId, gameId, game.current_round, gameId, gameId, game.current_round, gameId);
+  return { status: game.status, currentRound: game.current_round, players };
+}
+
+// GET /games/knockout/:id/events — SSE real-time updates
+router.get('/games/knockout/:id/events', ensureAuth, (req, res) => {
+  const db = getDb();
+  const gameId = parseInt(req.params.id);
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const state = knockoutGameState(db, gameId);
+  if (state) send(state);
+
+  const unsub = subscribe('knockout:' + gameId, (data) => send(data));
+  req.on('close', unsub);
 });
 
 router.post('/games/knockout/:id/cancel', ensureAuth, (req, res) => {

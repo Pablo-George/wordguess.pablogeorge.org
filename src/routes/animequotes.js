@@ -2,6 +2,8 @@ const express = require('express');
 const { getDb } = require('../db/database');
 const { ensureAuth } = require('../services/authService');
 const { generateAnimeQuote } = require('../services/geminiService');
+const { isValidWord } = require('../services/wordService');
+const { publish, subscribe } = require('../services/gameEvents');
 
 const router = express.Router();
 const MAX_GUESSES = 6;
@@ -171,7 +173,7 @@ router.post('/games/animequotes/:id/start', ensureAuth, async (req, res) => {
 });
 
 // POST /games/animequotes/:id/guess
-router.post('/games/animequotes/:id/guess', ensureAuth, (req, res) => {
+router.post('/games/animequotes/:id/guess', ensureAuth, async (req, res) => {
   const db = getDb();
   const game = db.prepare('SELECT * FROM animequote_games WHERE id = ?').get(req.params.id);
   if (!game || game.status !== 'active') return res.json({ error: 'Game not active' });
@@ -188,6 +190,7 @@ router.post('/games/animequotes/:id/guess', ensureAuth, (req, res) => {
 
   const guess = (req.body.guess || '').toUpperCase().replace(/[^A-Z]/g, '');
   if (guess.length !== word.word_length) return res.json({ error: `Must be ${word.word_length} letters` });
+  if (!(await isValidWord(guess))) return res.json({ error: 'Not a valid word' });
 
   const result = computeFeedback(guess, word.word);
   const solved = guess === word.word;
@@ -202,7 +205,36 @@ router.post('/games/animequotes/:id/guess', ensureAuth, (req, res) => {
   }
 
   checkGameComplete(db, game.id);
+  publish('animequotes:' + game.id, animequoteGameState(db, game.id));
   res.json({ ok: true });
+});
+
+function animequoteGameState(db, gameId) {
+  const game = db.prepare('SELECT status FROM animequote_games WHERE id = ?').get(gameId);
+  if (!game) return null;
+  const words = db.prepare('SELECT id, word_index, word, word_length, is_given, solved, revealed FROM animequote_words WHERE game_id = ? ORDER BY word_index ASC').all(gameId);
+  const players = db.prepare(`
+    SELECT aqp.user_id, u.display_name, u.avatar_url FROM animequote_players aqp
+    JOIN users u ON u.id = aqp.user_id WHERE aqp.game_id = ?
+  `).all(gameId);
+  return { status: game.status, words, players };
+}
+
+// GET /games/animequotes/:id/events — SSE real-time updates
+router.get('/games/animequotes/:id/events', ensureAuth, (req, res) => {
+  const db = getDb();
+  const gameId = parseInt(req.params.id);
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const state = animequoteGameState(db, gameId);
+  if (state) send(state);
+
+  const unsub = subscribe('animequotes:' + gameId, (data) => send(data));
+  req.on('close', unsub);
 });
 
 router.post('/games/animequotes/:id/cancel', ensureAuth, (req, res) => {

@@ -2,6 +2,7 @@ const express = require('express');
 const { getDb } = require('../db/database');
 const { ensureAuth } = require('../services/authService');
 const { POKEMON_GEN1 } = require('../data/pokemon_gen1');
+const { publish, subscribe } = require('../services/gameEvents');
 
 // Sorted by name length ascending so more players = longer (harder) name
 const POKEMON_BY_LENGTH = [...POKEMON_GEN1].filter(p => p.length >= 5).sort((a, b) => a.length - b.length || a.localeCompare(b));
@@ -250,6 +251,39 @@ router.get('/games/pokemon/:id/players', ensureAuth, (req, res) => {
   res.json({ status: game.status, players });
 });
 
+function pokemonGameState(db, gameId) {
+  const game = db.prepare('SELECT status, max_guesses FROM pokemon_games WHERE id = ?').get(gameId);
+  if (!game) return null;
+  const players = db.prepare(`
+    SELECT pgp.user_id, u.display_name, pgp.solved, pgp.guesses_count, pgp.score, u.avatar_url
+    FROM pokemon_game_players pgp JOIN users u ON u.id = pgp.user_id
+    WHERE pgp.game_id = ? ORDER BY pgp.score DESC, pgp.guesses_count ASC
+  `).all(gameId);
+  const guesses = db.prepare(`
+    SELECT pgg.user_id, u.display_name, pgg.guess, pgg.result_json, pgg.created_at
+    FROM pokemon_game_guesses pgg JOIN users u ON u.id = pgg.user_id
+    WHERE pgg.game_id = ? ORDER BY pgg.created_at ASC
+  `).all(gameId).map(g => ({ ...g, result: JSON.parse(g.result_json) }));
+  return { status: game.status, maxGuesses: game.max_guesses, players, guesses };
+}
+
+// GET /games/pokemon/:id/events — SSE real-time updates
+router.get('/games/pokemon/:id/events', ensureAuth, (req, res) => {
+  const db = getDb();
+  const gameId = parseInt(req.params.id);
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const state = pokemonGameState(db, gameId);
+  if (state) send(state);
+
+  const unsub = subscribe('pokemon:' + gameId, (data) => send(data));
+  req.on('close', unsub);
+});
+
 // POST /games/pokemon/:id/guess
 router.post('/games/pokemon/:id/guess', ensureAuth, (req, res) => {
   const db = getDb();
@@ -282,6 +316,9 @@ router.post('/games/pokemon/:id/guess', ensureAuth, (req, res) => {
   if (gameCompleted) {
     db.prepare("UPDATE pokemon_games SET status = 'completed' WHERE id = ?").run(game.id);
   }
+
+  const state = pokemonGameState(db, game.id);
+  if (state) publish('pokemon:' + game.id, state);
 
   const outOfGuesses = !solved && newCount >= game.max_guesses;
   res.json({

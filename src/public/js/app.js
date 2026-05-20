@@ -314,35 +314,16 @@
       });
     });
 
-    // Poll player status every 6s without full page reload
+    // Real-time updates via SSE
     var gameId = pokemonForm.getAttribute('data-game-id');
-    function pollPlayers() {
-      fetch('/games/pokemon/' + gameId + '/players')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.status === 'completed') { window.location.reload(); return; }
-          var list = document.querySelector('.player-status-list');
-          if (!list || !data.players) return;
-          data.players.forEach(function(p) {
-            var item = list.querySelector('[data-user-id="' + p.user_id + '"]');
-            if (!item) return;
-            var maxGuesses = parseInt(list.getAttribute('data-max-guesses'), 10);
-            if (p.solved) {
-              item.className = 'player-status-item solved';
-              var badge = item.querySelector('.status-badge');
-              if (badge) badge.textContent = p.guesses_count + ' guess' + (p.guesses_count !== 1 ? 'es' : '');
-            } else if (p.guesses_count >= maxGuesses) {
-              item.className = 'player-status-item failed';
-            } else {
-              var counter = item.querySelector('.guess-counter');
-              if (counter) counter.textContent = p.guesses_count + '/' + maxGuesses;
-            }
-          });
-        })
-        .catch(function() {});
-    }
-    var pollInterval = setInterval(pollPlayers, 6000);
-    window.addEventListener('beforeunload', function() { clearInterval(pollInterval); });
+    var pokemonEvt = new EventSource('/games/pokemon/' + gameId + '/events');
+    pokemonEvt.onmessage = function(e) {
+      var data = JSON.parse(e.data);
+      if (data.status === 'completed') { pokemonEvt.close(); window.location.reload(); return; }
+      updatePokemonPlayers(data);
+      updatePokemonGuesses(data);
+    };
+    window.addEventListener('beforeunload', function() { pokemonEvt.close(); });
   }
 
   // Royale guesses
@@ -498,6 +479,97 @@
     table.parentNode.insertBefore(wrapper, table);
     wrapper.appendChild(table);
   });
+
+  // ── POKEMON REAL-TIME HELPERS ─────────────────────────────────
+  function updatePokemonPlayers(data) {
+    var list = document.querySelector('.player-status-list');
+    if (!list || !data.players) return;
+    var maxGuesses = parseInt(list.getAttribute('data-max-guesses'), 10);
+    data.players.forEach(function(p) {
+      var item = list.querySelector('[data-user-id="' + p.user_id + '"]');
+      if (!item) return;
+      if (p.solved) {
+        item.className = 'player-status-item solved';
+        var badge = item.querySelector('.status-badge');
+        if (badge) badge.textContent = p.guesses_count + ' guess' + (p.guesses_count !== 1 ? 'es' : '');
+      } else if (p.guesses_count >= maxGuesses) {
+        item.className = 'player-status-item failed';
+      } else {
+        var counter = item.querySelector('.guess-counter');
+        if (counter) counter.textContent = p.guesses_count + '/' + maxGuesses;
+      }
+    });
+  }
+
+  function updatePokemonGuesses(data) {
+    var feed = document.getElementById('pokemon-guess-feed');
+    if (!feed || !data.guesses) return;
+    feed.innerHTML = data.guesses.slice().reverse().slice(0, 20).map(function(g) {
+      var tiles = g.result.map(function(r) {
+        return '<span class="feed-tile feed-tile-' + r.status + '">' + r.letter + '</span>';
+      }).join('');
+      return '<div class="feed-row"><span class="feed-name">' + g.display_name + '</span>' + tiles + '</div>';
+    }).join('');
+  }
+
+  // ── KNOCKOUT REAL-TIME ────────────────────────────────────────
+  var knockoutBoard = document.getElementById('knockout-board');
+  if (knockoutBoard) {
+    var koGameId = document.getElementById('knockout-guess-form') && document.getElementById('knockout-guess-form').getAttribute('data-game-id');
+    if (!koGameId) koGameId = (window.location.pathname.match(/\/games\/knockout\/(\d+)/) || [])[1];
+    if (koGameId) {
+      var koEvt = new EventSource('/games/knockout/' + koGameId + '/events');
+      koEvt.onmessage = function(e) {
+        var data = JSON.parse(e.data);
+        var list = document.querySelector('.player-status-list');
+        if (!list || !data.players) return;
+        data.players.forEach(function(p) {
+          var item = list.querySelector('[data-user-id="' + p.user_id + '"]');
+          if (!item) return;
+          var scoreEl = item.querySelector('.text-sm');
+          if (p.status === 'eliminated') {
+            item.className = 'player-status-item failed';
+          } else if (scoreEl) {
+            scoreEl.textContent = p.total_score + ' pts';
+          }
+        });
+      };
+      window.addEventListener('beforeunload', function() { koEvt.close(); });
+    }
+  }
+
+  // ── ANIMEQUOTES REAL-TIME ─────────────────────────────────────
+  var aqLayout = document.getElementById('quote-layout');
+  if (aqLayout) {
+    var aqGameId = (window.location.pathname.match(/\/games\/animequotes\/(\d+)/) || [])[1];
+    if (aqGameId) {
+      var aqEvt = new EventSource('/games/animequotes/' + aqGameId + '/events');
+      aqEvt.onmessage = function(e) {
+        var data = JSON.parse(e.data);
+        if (!data.words) return;
+        if (data.status === 'completed') { aqEvt.close(); window.location.reload(); return; }
+        data.words.forEach(function(w) {
+          var btn = aqLayout.querySelector('[data-word-id="' + w.id + '"]');
+          if (!btn) return;
+          if (w.solved && !btn.classList.contains('aq-word--solved')) {
+            btn.className = 'aq-word aq-word--solved';
+            btn.textContent = w.word;
+          } else if (w.revealed && !btn.classList.contains('aq-word--revealed')) {
+            btn.className = 'aq-word aq-word--revealed';
+            btn.textContent = w.word;
+          }
+        });
+        // Update progress bar
+        var totalGuessable = data.words.filter(function(w) { return !w.is_given; }).length;
+        var totalSolved = data.words.filter(function(w) { return w.solved; }).length;
+        var fill = document.querySelector('.aq-progress-fill');
+        var label = document.querySelector('.aq-progress .text-sm');
+        if (fill) fill.style.width = (totalGuessable > 0 ? Math.round(totalSolved / totalGuessable * 100) : 0) + '%';
+        if (label) label.textContent = totalSolved + '/' + totalGuessable + ' words solved';
+      };
+      window.addEventListener('beforeunload', function() { aqEvt.close(); });
+    }
+  }
 
   // ── ON-SCREEN KEYBOARD ────────────────────────────────────────
   (function() {
