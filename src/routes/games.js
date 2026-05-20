@@ -16,6 +16,24 @@ function isLobbyStale(db, type, gameId) {
   return Date.now() - new Date(hb.last_seen + 'Z').getTime() > LOBBY_STALE_MS;
 }
 
+function cleanStaleActiveGames(db) {
+  [
+    { gameTable: 'pokemon_games',    guessTable: 'pokemon_game_guesses' },
+    { gameTable: 'knockout_games',   guessTable: 'knockout_guesses' },
+    { gameTable: 'animequote_games', guessTable: 'animequote_guesses' },
+    { gameTable: 'zombie_games',     guessTable: 'zombie_guesses' },
+  ].forEach(({ gameTable, guessTable }) => {
+    db.prepare(`
+      UPDATE ${gameTable} SET status = 'completed'
+      WHERE status = 'active'
+      AND COALESCE(
+        (SELECT MAX(created_at) FROM ${guessTable} WHERE game_id = ${gameTable}.id),
+        ${gameTable}.created_at
+      ) < datetime('now', '-2 minutes')
+    `).run();
+  });
+}
+
 function cleanStaleLobbies(db) {
   const threshold = "datetime('now', '-25 seconds')";
   [
@@ -131,6 +149,7 @@ function getFriendLobbies(db, userId) {
 router.get('/games', ensureAuth, (req, res) => {
   const db = getDb();
   cleanStaleLobbies(db);
+  cleanStaleActiveGames(db);
   const openLobbies = getFriendLobbies(db, req.user.id);
 
   const myGames = db.prepare(`
@@ -151,6 +170,7 @@ router.get('/games', ensureAuth, (req, res) => {
 router.get('/games/lobbies', ensureAuth, (req, res) => {
   const db = getDb();
   cleanStaleLobbies(db);
+  cleanStaleActiveGames(db);
   res.json(getFriendLobbies(db, req.user.id));
 });
 
