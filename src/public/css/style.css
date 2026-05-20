@@ -1125,6 +1125,61 @@ code {
 
 .nav-logout-link { display: none; }
 
+/* ── ON-SCREEN KEYBOARD ──────────────────────── */
+.keyboard {
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  margin: 1rem auto 1.5rem;
+  width: 100%;
+  max-width: 480px;
+}
+.keyboard-row {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+  justify-content: center;
+}
+.key {
+  flex: 1;
+  max-width: 40px;
+  height: 50px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--card);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.key:active { opacity: 0.6; }
+.key-wide {
+  flex: 1.5;
+  max-width: 60px;
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.key-green  { background: var(--green);  border-color: var(--green);  color: #000; }
+.key-yellow { background: var(--yellow); border-color: var(--yellow); color: #000; }
+.key-gray   { background: #111118; border-color: #111118; color: var(--text-dim); }
+
+.tile-active {
+  border-color: var(--text-mid) !important;
+  color: var(--text) !important;
+}
+
 /* ── RESPONSIVE ──────────────────────────────── */
 
 /* Touch targets — apply at all sizes */
@@ -1226,4 +1281,8 @@ input, select, textarea { min-height: 44px; }
   /* Anime chip grid */
   .anime-grid { gap: 0.4rem; }
   .anime-chip { min-height: 40px; }
+
+  /* Keyboard */
+  .key { height: 44px; font-size: 1rem; }
+  .key-wide { font-size: 0.58rem; }
 }

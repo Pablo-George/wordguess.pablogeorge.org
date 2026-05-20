@@ -33,11 +33,11 @@
       Out of guesses! The word was "<%= answer %>"
     </div>
   <% } else { %>
-    <form id="guess-form" class="guess-form">
-      <input type="text" id="guess-input" maxlength="<%= wordLength %>" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" autofocus>
-      <button type="submit" class="btn btn-primary">Guess</button>
+    <form id="guess-form" style="margin:0">
+      <input type="text" id="guess-input" maxlength="<%= wordLength %>" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="none" style="display:none">
     </form>
     <div id="error-msg" class="error-msg"></div>
+    <div id="game-keyboard" data-board="board" data-input="guess-input" data-form="guess-form"></div>
   <% } %>
 </div>
 

@@ -118,12 +118,12 @@
         </div>
 
         <% if (!activeWord.solved && !activeWord.revealed && activeGuesses.length < maxGuesses) { %>
-          <form id="aq-guess-form" class="guess-form" data-word-id="<%= activeWord.id %>" data-game-id="<%= game.id %>">
+          <form id="aq-guess-form" style="margin:0" data-word-id="<%= activeWord.id %>" data-game-id="<%= game.id %>">
             <input type="text" id="aq-guess-input" maxlength="<%= activeWord.word_length %>"
-              autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" autofocus>
-            <button type="submit" class="btn btn-primary">Guess</button>
+              autocomplete="off" spellcheck="false" inputmode="none" style="display:none">
           </form>
-          <div id="aq-error" class="error-msg"></div>
+          <div id="aq-error" class="error-msg" style="text-align:center"></div>
+          <div id="game-keyboard" data-board="aq-board" data-input="aq-guess-input" data-form="aq-guess-form"></div>
         <% } else if (activeWord.solved) { %>
           <div class="result-message win">Word solved!</div>
         <% } else { %>

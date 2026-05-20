@@ -58,13 +58,13 @@
       </form>
     </div>
   <% } else { %>
-    <form id="classic-guess-form" class="guess-form">
+    <form id="classic-guess-form" style="margin:0">
       <input type="text" id="classic-guess-input" maxlength="5"
-        autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" autofocus>
-      <button type="submit" class="btn btn-primary">Guess</button>
+        autocomplete="off" spellcheck="false" inputmode="none" style="display:none">
     </form>
-    <div id="classic-error" class="error-msg"></div>
-    <div class="classic-actions" style="margin-top:1rem">
+    <div id="classic-error" class="error-msg" style="text-align:center"></div>
+    <div id="game-keyboard" data-board="classic-board" data-input="classic-guess-input" data-form="classic-guess-form"></div>
+    <div class="classic-actions">
       <form action="/classic/new" method="POST">
         <button type="submit" class="btn">Give Up</button>
       </form>

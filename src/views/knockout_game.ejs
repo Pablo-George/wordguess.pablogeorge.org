@@ -94,12 +94,12 @@
     <% } %>
 
     <% if (!myDone && !isEliminated) { %>
-      <form id="knockout-guess-form" class="guess-form" data-game-id="<%= game.id %>">
+      <form id="knockout-guess-form" style="margin:0" data-game-id="<%= game.id %>">
         <input type="text" id="knockout-guess-input" maxlength="5"
-          autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" autofocus>
-        <button type="submit" class="btn btn-primary">Guess</button>
+          autocomplete="off" spellcheck="false" inputmode="none" style="display:none">
       </form>
-      <div id="knockout-error" class="error-msg"></div>
+      <div id="knockout-error" class="error-msg" style="text-align:center"></div>
+      <div id="game-keyboard" data-board="knockout-board" data-input="knockout-guess-input" data-form="knockout-guess-form"></div>
     <% } else if (mySolved) { %>
       <div class="result-message win">
         Solved in <%= myRoundScore.guesses_count %> guess<%= myRoundScore.guesses_count !== 1 ? 'es' : '' %>! +<%= myRoundScore.score %> pts — waiting for others...

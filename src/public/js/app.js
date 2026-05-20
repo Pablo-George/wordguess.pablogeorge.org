@@ -49,7 +49,7 @@
       var btn = classicForm.querySelector('button[type=submit]');
 
       classicSubmitting = true;
-      btn.disabled = true;
+      if (btn) btn.disabled = true;
       errorEl.textContent = '';
 
       fetch('/classic/guess', {
@@ -62,8 +62,7 @@
         if (data.error) {
           errorEl.textContent = data.error;
           classicSubmitting = false;
-          btn.disabled = false;
-          input.focus();
+          if (btn) btn.disabled = false;
           return;
         }
 
@@ -84,12 +83,17 @@
         }
 
         input.value = '';
+        if (window.syncKeyboardTiles) window.syncKeyboardTiles();
         var totalDelay = data.result.length * 80 + 175;
 
         setTimeout(function() {
+          if (window.updateKeyboardColors) window.updateKeyboardColors();
           if (data.solved || data.outOfGuesses) {
             classicForm.style.display = 'none';
-            document.querySelector('.classic-actions').style.display = 'none';
+            var kbEl = document.getElementById('game-keyboard');
+            if (kbEl) kbEl.style.display = 'none';
+            var actionsEl = document.querySelector('.classic-actions');
+            if (actionsEl) actionsEl.style.display = 'none';
 
             var msg = document.createElement('div');
             msg.id = 'classic-result';
@@ -113,15 +117,14 @@
             }
           } else {
             classicSubmitting = false;
-            btn.disabled = false;
-            input.focus();
+            if (btn) btn.disabled = false;
           }
         }, totalDelay);
       })
       .catch(function() {
         errorEl.textContent = 'Error submitting guess';
         classicSubmitting = false;
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
       });
     });
   }
@@ -217,7 +220,7 @@
       var btn = pokemonForm.querySelector('button[type=submit]');
 
       pokemonSubmitting = true;
-      btn.disabled = true;
+      if (btn) btn.disabled = true;
       errorEl.textContent = '';
 
       fetch('/games/pokemon/' + gameId + '/guess', {
@@ -230,8 +233,7 @@
         if (data.error) {
           errorEl.textContent = data.error;
           pokemonSubmitting = false;
-          btn.disabled = false;
-          input.focus();
+          if (btn) btn.disabled = false;
           return;
         }
 
@@ -255,38 +257,45 @@
         }
 
         input.value = '';
+        if (window.syncKeyboardTiles) window.syncKeyboardTiles();
 
         var totalDelay = data.result.length * 80 + 175;
         setTimeout(function() {
+          if (window.updateKeyboardColors) window.updateKeyboardColors();
           if (data.solved) {
             pokemonForm.style.display = 'none';
+            var kbEl2 = document.getElementById('game-keyboard');
+            if (kbEl2) kbEl2.style.display = 'none';
             var msg = document.createElement('div');
             msg.className = 'result-message win';
             msg.textContent = 'You got it in ' + data.guessCount + ' guess' + (data.guessCount !== 1 ? 'es' : '') + '! +' + data.score + ' pts';
             pokemonForm.parentNode.insertBefore(msg, pokemonForm);
           } else if (data.outOfGuesses) {
             pokemonForm.style.display = 'none';
+            var kbEl2 = document.getElementById('game-keyboard');
+            if (kbEl2) kbEl2.style.display = 'none';
             var msg = document.createElement('div');
             msg.className = 'result-message fail';
             msg.innerHTML = 'Out of guesses! The Pokémon was <strong>' + data.answer + '</strong>';
             pokemonForm.parentNode.insertBefore(msg, pokemonForm);
           } else if (data.gameCompleted) {
             pokemonForm.style.display = 'none';
+            var kbEl2 = document.getElementById('game-keyboard');
+            if (kbEl2) kbEl2.style.display = 'none';
             var msg = document.createElement('div');
             msg.className = 'result-message fail';
             msg.innerHTML = 'Game over! The Pokémon was <strong>' + data.answer + '</strong>';
             pokemonForm.parentNode.insertBefore(msg, pokemonForm);
           } else {
             pokemonSubmitting = false;
-            btn.disabled = false;
-            input.focus();
+            if (btn) btn.disabled = false;
           }
         }, totalDelay);
       })
       .catch(function() {
         errorEl.textContent = 'Error submitting guess';
         pokemonSubmitting = false;
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
       });
     });
 
@@ -474,4 +483,151 @@
     table.parentNode.insertBefore(wrapper, table);
     wrapper.appendChild(table);
   });
+
+  // ── ON-SCREEN KEYBOARD ────────────────────────────────────────
+  (function() {
+    var container = document.getElementById('game-keyboard');
+    if (!container) return;
+
+    var boardId = container.getAttribute('data-board');
+    var inputId = container.getAttribute('data-input');
+    var formId  = container.getAttribute('data-form');
+    var board = boardId ? document.getElementById(boardId) : null;
+    var input = inputId ? document.getElementById(inputId) : null;
+    var form  = formId  ? document.getElementById(formId)  : null;
+    if (!input || !form) return;
+
+    var ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+    var keyEls = {};
+
+    function mkKey(label, wide) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = wide ? 'key key-wide' : 'key';
+      btn.textContent = label;
+      return btn;
+    }
+
+    function buildKeyboard() {
+      var kb = document.createElement('div');
+      kb.className = 'keyboard';
+
+      ROWS.forEach(function(letters, ri) {
+        var row = document.createElement('div');
+        row.className = 'keyboard-row';
+
+        if (ri === 2) {
+          var enterKey = mkKey('Enter', true);
+          enterKey.addEventListener('click', submitGuess);
+          row.appendChild(enterKey);
+        }
+
+        letters.split('').forEach(function(ch) {
+          var key = mkKey(ch, false);
+          key.addEventListener('click', function() { pressLetter(ch); });
+          keyEls[ch] = key;
+          row.appendChild(key);
+        });
+
+        if (ri === 2) {
+          var bsKey = mkKey('⌫', true);
+          bsKey.addEventListener('click', pressBackspace);
+          row.appendChild(bsKey);
+        }
+
+        kb.appendChild(row);
+      });
+
+      container.appendChild(kb);
+    }
+
+    function getWordLength() {
+      return parseInt(input.getAttribute('maxlength'), 10) || 5;
+    }
+
+    function getActiveRow() {
+      return board ? board.querySelector('.row:not([data-filled])') : null;
+    }
+
+    function syncActiveTiles() {
+      var row = getActiveRow();
+      if (!row) return;
+      var tiles = row.querySelectorAll('.tile');
+      var val = input.value;
+      tiles.forEach(function(tile, i) {
+        if (i < val.length) {
+          tile.textContent = val[i];
+          tile.className = 'tile tile-active';
+        } else {
+          tile.textContent = '';
+          tile.className = 'tile tile-empty';
+        }
+      });
+    }
+
+    function pressLetter(ch) {
+      if (form.style.display === 'none') return;
+      if (input.value.length >= getWordLength()) return;
+      input.value += ch;
+      syncActiveTiles();
+    }
+
+    function pressBackspace() {
+      if (form.style.display === 'none') return;
+      if (!input.value.length) return;
+      input.value = input.value.slice(0, -1);
+      syncActiveTiles();
+    }
+
+    function submitGuess() {
+      if (form.style.display === 'none') return;
+      if (input.value.length < getWordLength()) return;
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    }
+
+    function computeLetterStates() {
+      var states = {};
+      var rank = { green: 3, yellow: 2, gray: 1 };
+      if (!board) return states;
+      board.querySelectorAll('.row[data-filled]').forEach(function(row) {
+        row.querySelectorAll('.tile').forEach(function(tile) {
+          var letter = tile.textContent.trim().toUpperCase();
+          if (!letter) return;
+          var status = tile.classList.contains('tile-green') ? 'green'
+                     : tile.classList.contains('tile-yellow') ? 'yellow'
+                     : tile.classList.contains('tile-gray') ? 'gray'
+                     : null;
+          if (status && (!states[letter] || rank[status] > rank[states[letter]])) {
+            states[letter] = status;
+          }
+        });
+      });
+      return states;
+    }
+
+    function updateKeyboardColors() {
+      var states = computeLetterStates();
+      Object.keys(keyEls).forEach(function(ch) {
+        keyEls[ch].className = 'key' + (states[ch] ? ' key-' + states[ch] : '');
+      });
+    }
+
+    window.updateKeyboardColors = updateKeyboardColors;
+    window.syncKeyboardTiles = syncActiveTiles;
+
+    buildKeyboard();
+    updateKeyboardColors();
+
+    // Physical keyboard support
+    document.addEventListener('keydown', function(e) {
+      if (form.style.display === 'none') return;
+      var active = document.activeElement;
+      if (active && active.tagName === 'TEXTAREA') return;
+      if (active && active.tagName === 'INPUT' && active !== input) return;
+      if (e.key === 'Backspace') { e.preventDefault(); pressBackspace(); }
+      else if (e.key === 'Enter') { submitGuess(); }
+      else if (/^[a-zA-Z]$/.test(e.key)) { e.preventDefault(); pressLetter(e.key.toUpperCase()); }
+    });
+  })();
+
 })();

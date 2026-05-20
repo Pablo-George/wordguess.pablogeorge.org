@@ -78,12 +78,12 @@
         Game over! The Pokémon was <strong><%= answer %></strong>
       </div>
     <% } else { %>
-      <form id="pokemon-guess-form" class="guess-form" data-game-id="<%= game.id %>">
+      <form id="pokemon-guess-form" style="margin:0" data-game-id="<%= game.id %>">
         <input type="text" id="pokemon-guess-input" maxlength="<%= wordLength %>"
-          autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" autofocus>
-        <button type="submit" class="btn btn-primary">Guess</button>
+          autocomplete="off" spellcheck="false" inputmode="none" style="display:none">
       </form>
-      <div id="pokemon-error" class="error-msg"></div>
+      <div id="pokemon-error" class="error-msg" style="text-align:center"></div>
+      <div id="game-keyboard" data-board="pokemon-board" data-input="pokemon-guess-input" data-form="pokemon-guess-form"></div>
     <% } %>
 
     <section class="dash-section" style="margin-top:2rem">
