@@ -77,9 +77,21 @@ passport.use(new GoogleStrategy({
   }
 }));
 
+// Asset version for cache busting — changes on every server restart/deploy
+const { execSync } = require('child_process');
+const ASSET_VERSION = (() => {
+  try { return execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim(); }
+  catch { return Date.now().toString(36); }
+})();
+
 // View engine
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
+
+app.use(function(req, res, next) {
+  res.locals.assetVersion = ASSET_VERSION;
+  next();
+});
 
 app.use(loadUser);
 
