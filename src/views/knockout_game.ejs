@@ -115,13 +115,13 @@
         <% players.forEach(function(p) { %>
           <% var rs = null; %>
           <%# We can't do DB calls in EJS, so roundScore is passed per player via the view — use total_score display %>
-          <div class="player-status-item <%= p.status === 'eliminated' ? 'failed' : '' %>">
+          <div class="player-status-item <%= p.status === 'eliminated' ? 'failed' : '' %>" data-user-id="<%= p.user_id %>">
             <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
             <span style="flex:1"><%= p.display_name %></span>
             <% if (p.status === 'eliminated') { %>
-              <span class="badge dead">Eliminated R<%= p.eliminated_round %></span>
+              <span class="badge dead ko-status">Eliminated R<%= p.eliminated_round %></span>
             <% } else { %>
-              <span class="text-sm"><%= p.total_score %> pts</span>
+              <span class="text-sm ko-score"><%= p.total_score %> pts</span>
             <% } %>
           </div>
         <% }) %>

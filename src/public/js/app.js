@@ -314,16 +314,23 @@
       });
     });
 
-    // Real-time updates via SSE
-    var gameId = pokemonForm.getAttribute('data-game-id');
-    var pokemonEvt = new EventSource('/games/pokemon/' + gameId + '/events');
-    pokemonEvt.onmessage = function(e) {
-      var data = JSON.parse(e.data);
-      if (data.status === 'completed') { pokemonEvt.close(); window.location.reload(); return; }
-      updatePokemonPlayers(data);
-      updatePokemonGuesses(data);
-    };
-    window.addEventListener('beforeunload', function() { pokemonEvt.close(); });
+  }
+
+  // Pokemon real-time updates via SSE (connects regardless of whether form is present)
+  var pokemonBoard = document.getElementById('pokemon-board');
+  if (pokemonBoard) {
+    var pokemonGameId = (pokemonForm && pokemonForm.getAttribute('data-game-id'))
+      || (window.location.pathname.match(/\/games\/pokemon\/(\d+)/) || [])[1];
+    if (pokemonGameId) {
+      var pokemonEvt = new EventSource('/games/pokemon/' + pokemonGameId + '/events');
+      pokemonEvt.onmessage = function(e) {
+        var data = JSON.parse(e.data);
+        if (data.status === 'completed') { pokemonEvt.close(); window.location.reload(); return; }
+        updatePokemonPlayers(data);
+        updatePokemonGuesses(data);
+      };
+      window.addEventListener('beforeunload', function() { pokemonEvt.close(); });
+    }
   }
 
   // Royale guesses
@@ -488,12 +495,27 @@
     data.players.forEach(function(p) {
       var item = list.querySelector('[data-user-id="' + p.user_id + '"]');
       if (!item) return;
+      var rightEl = item.querySelector('.status-badge, .badge.dead, .guess-counter');
       if (p.solved) {
         item.className = 'player-status-item solved';
-        var badge = item.querySelector('.status-badge');
-        if (badge) badge.textContent = p.guesses_count + ' guess' + (p.guesses_count !== 1 ? 'es' : '');
+        var guessLabel = p.guesses_count + ' guess' + (p.guesses_count !== 1 ? 'es' : '');
+        if (rightEl && rightEl.classList.contains('status-badge')) {
+          rightEl.textContent = guessLabel;
+        } else {
+          if (rightEl) rightEl.remove();
+          var badge = document.createElement('span');
+          badge.className = 'badge winner status-badge';
+          badge.textContent = guessLabel;
+          item.appendChild(badge);
+          var pts = document.createElement('span');
+          pts.className = 'badge';
+          pts.style.cssText = 'background:transparent;color:var(--accent)';
+          pts.textContent = '+' + p.score + 'pts';
+          item.appendChild(pts);
+        }
       } else if (p.guesses_count >= maxGuesses) {
         item.className = 'player-status-item failed';
+        if (rightEl) rightEl.textContent = 'Out';
       } else {
         var counter = item.querySelector('.guess-counter');
         if (counter) counter.textContent = p.guesses_count + '/' + maxGuesses;
@@ -521,16 +543,19 @@
       var koEvt = new EventSource('/games/knockout/' + koGameId + '/events');
       koEvt.onmessage = function(e) {
         var data = JSON.parse(e.data);
+        if (data.status === 'completed') { koEvt.close(); window.location.reload(); return; }
         var list = document.querySelector('.player-status-list');
         if (!list || !data.players) return;
         data.players.forEach(function(p) {
           var item = list.querySelector('[data-user-id="' + p.user_id + '"]');
           if (!item) return;
-          var scoreEl = item.querySelector('.text-sm');
           if (p.status === 'eliminated') {
             item.className = 'player-status-item failed';
-          } else if (scoreEl) {
-            scoreEl.textContent = p.total_score + ' pts';
+            var statusEl = item.querySelector('.ko-status, .ko-score');
+            if (statusEl) { statusEl.className = 'badge dead ko-status'; statusEl.textContent = 'Eliminated'; }
+          } else {
+            var scoreEl = item.querySelector('.ko-score');
+            if (scoreEl) scoreEl.textContent = p.total_score + ' pts';
           }
         });
       };
