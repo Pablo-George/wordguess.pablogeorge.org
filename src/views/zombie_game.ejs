@@ -159,33 +159,6 @@ document.addEventListener('DOMContentLoaded', function() {
   var guessForm = document.getElementById('zombie-guess-form');
   var errorEl = document.getElementById('zombie-error');
 
-  // Merged keyboard colors from all zombie boards
-  function updateZombieKeyboard() {
-    var priority = { green: 3, yellow: 2, gray: 1 };
-    var best = {};
-    for (var b = 0; b < WORD_COUNT; b++) {
-      var board = document.getElementById('zombie-board-' + b);
-      if (!board) continue;
-      board.querySelectorAll('.row[data-filled] .tile').forEach(function(tile) {
-        var letter = tile.textContent.trim();
-        if (!letter) return;
-        var cls = null;
-        tile.classList.forEach(function(c) { if (c !== 'tile' && c.startsWith('tile-') && c !== 'tile-flip') cls = c; });
-        if (!cls) return;
-        var status = cls.replace('tile-', '');
-        if (!priority[status]) return;
-        if (!best[letter] || priority[status] > priority[best[letter]]) best[letter] = status;
-      });
-    }
-    document.querySelectorAll('.key[data-key]').forEach(function(key) {
-      var l = key.getAttribute('data-key');
-      if (best[l]) key.className = 'key key-' + best[l];
-    });
-  }
-
-  // Override the generic keyboard updater with zombie version
-  window.updateKeyboardColors = updateZombieKeyboard;
-
   // Point keyboard data-board at the first unsolved board for syncKeyboardTiles
   function refreshKeyboardTarget() {
     var kb = document.getElementById('game-keyboard');
@@ -312,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         setTimeout(function() {
           markSolvedBoards(data.solvedMask);
-          updateZombieKeyboard();
+          if (window.updateKeyboardColors) window.updateKeyboardColors();
 
           if (data.gameOver) {
             showBanner('🧟 OVERRUN!', '#ef4444', '#fff');
@@ -352,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         updateProximityBar(guessesUsed, MAX_GUESSES);
         markSolvedBoards(data.round.solvedMask);
-        updateZombieKeyboard();
+        if (window.updateKeyboardColors) window.updateKeyboardColors();
       }
     };
     window.addEventListener('beforeunload', function() { evtSource.close(); });

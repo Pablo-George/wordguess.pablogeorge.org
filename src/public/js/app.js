@@ -700,9 +700,9 @@
     function computeLetterStates() {
       var states = {};
       var rank = { green: 3, yellow: 2, gray: 1 };
-      if (!board) return states;
-      board.querySelectorAll('.row[data-filled]').forEach(function(row) {
-        row.querySelectorAll('.tile').forEach(function(tile) {
+      // Read from ALL boards on the page so multi-board games (zombie) work
+      document.querySelectorAll('.board').forEach(function(b) {
+        b.querySelectorAll('.row[data-filled] .tile').forEach(function(tile) {
           var letter = tile.textContent.trim().toUpperCase();
           if (!letter) return;
           var status = tile.classList.contains('tile-green') ? 'green'
