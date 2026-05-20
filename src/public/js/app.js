@@ -316,9 +316,9 @@
 
   }
 
-  // Pokemon real-time updates via SSE (connects regardless of whether form is present)
+  // Pokemon real-time updates via SSE (only when game is active — avoids reload loop on completed page)
   var pokemonBoard = document.getElementById('pokemon-board');
-  if (pokemonBoard) {
+  if (pokemonBoard && pokemonBoard.getAttribute('data-status') === 'active') {
     var pokemonGameId = (pokemonForm && pokemonForm.getAttribute('data-game-id'))
       || (window.location.pathname.match(/\/games\/pokemon\/(\d+)/) || [])[1];
     if (pokemonGameId) {
@@ -536,7 +536,7 @@
 
   // ── KNOCKOUT REAL-TIME ────────────────────────────────────────
   var knockoutBoard = document.getElementById('knockout-board');
-  if (knockoutBoard) {
+  if (knockoutBoard && knockoutBoard.getAttribute('data-status') === 'active') {
     var koGameId = document.getElementById('knockout-guess-form') && document.getElementById('knockout-guess-form').getAttribute('data-game-id');
     if (!koGameId) koGameId = (window.location.pathname.match(/\/games\/knockout\/(\d+)/) || [])[1];
     if (koGameId) {
@@ -565,7 +565,7 @@
 
   // ── ANIMEQUOTES REAL-TIME ─────────────────────────────────────
   var aqLayout = document.getElementById('quote-layout');
-  if (aqLayout) {
+  if (aqLayout && aqLayout.getAttribute('data-status') === 'active') {
     var aqGameId = (window.location.pathname.match(/\/games\/animequotes\/(\d+)/) || [])[1];
     if (aqGameId) {
       var aqEvt = new EventSource('/games/animequotes/' + aqGameId + '/events');

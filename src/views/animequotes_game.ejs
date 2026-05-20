@@ -65,7 +65,7 @@
     </div>
 
     <%# Quote layout %>
-    <div class="aq-quote-layout" id="quote-layout">
+    <div class="aq-quote-layout" id="quote-layout" data-status="<%= game.status %>">
       <% quoteWords.forEach(function(w) { %>
         <% if (w.is_given || w.solved || w.revealed) { %>
           <span class="aq-word <%= w.solved ? 'aq-word--solved' : (w.revealed ? 'aq-word--revealed' : 'aq-word--given') %>">
