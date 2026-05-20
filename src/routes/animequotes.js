@@ -164,7 +164,7 @@ router.post('/games/animequotes/:id/start', ensureAuth, async (req, res) => {
     checkGameComplete(db, game.id);
   } catch (err) {
     console.error('Gemini error:', err.message);
-    return res.status(500).send('Failed to generate quote. Make sure GEMINI_API_KEY is set.');
+    return res.status(500).send('Failed to generate quote: ' + err.message);
   }
 
   res.redirect('/games/animequotes/' + game.id);
