@@ -78,10 +78,11 @@ passport.use(new GoogleStrategy({
 }));
 
 // Asset version for cache busting — changes on every server restart/deploy
-const { execSync } = require('child_process');
 const ASSET_VERSION = (() => {
-  try { return execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim(); }
-  catch { return Date.now().toString(36); }
+  try {
+    const { execSync } = require('child_process');
+    return execSync('git rev-parse --short HEAD', { cwd: __dirname, stdio: ['pipe','pipe','pipe'] }).toString().trim();
+  } catch { return Date.now().toString(36); }
 })();
 
 // View engine
@@ -157,6 +158,8 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`WordGuess running on ${BASE_URL}`);
+  console.log('Env check — GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'SET ✓' : 'NOT SET ✗');
+  console.log('Env check — GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'SET ✓' : 'NOT SET ✗');
 });
 
 module.exports = app;
