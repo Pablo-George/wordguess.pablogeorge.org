@@ -106,6 +106,7 @@ const knockoutRoutes = require('./routes/knockout');
 const animequotesRoutes = require('./routes/animequotes');
 const battleRoutes = require('./routes/battles');
 const royaleRoutes = require('./routes/royale');
+const zombieRoutes = require('./routes/zombie');
 
 app.use(authRoutes);
 app.use(dailyRoutes);
@@ -116,6 +117,7 @@ app.use(knockoutRoutes);
 app.use(animequotesRoutes);
 app.use(battleRoutes);
 app.use(royaleRoutes);
+app.use(zombieRoutes);
 
 // Home
 app.get('/', (req, res) => {

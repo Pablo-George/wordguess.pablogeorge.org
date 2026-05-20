@@ -8,8 +8,8 @@
       <% if (openLobbies.length === 0) { %>
         <p class="empty">No open lobbies from friends right now</p>
       <% } else { %>
-        <% var typeNames = { pokemon: 'Pokémon Name', knockout: 'Knockout', animequotes: 'Anime Quote' }; %>
-        <% var joinUrls = { pokemon: '/games/pokemon/', knockout: '/games/knockout/', animequotes: '/games/animequotes/' }; %>
+        <% var typeNames = { pokemon: 'Pokémon Name', knockout: 'Knockout', animequotes: 'Anime Quote', zombie: '🧟 Zombie Horde' }; %>
+        <% var joinUrls = { pokemon: '/games/pokemon/', knockout: '/games/knockout/', animequotes: '/games/animequotes/', zombie: '/games/zombie/' }; %>
         <% openLobbies.forEach(function(g) { %>
           <div class="dash-card">
             <div style="display:flex;align-items:center;gap:0.6rem;flex:1">
@@ -63,6 +63,15 @@
         </form>
       </div>
 
+      <div class="game-mode-card">
+        <div class="game-mode-label">Co-op · Survival</div>
+        <h3>🧟 Zombie Horde</h3>
+        <p class="text-sm">Solve words together before the horde reaches you. Each wave cleared adds another zombie. How many waves can your squad survive?</p>
+        <form action="/games/zombie" method="POST" style="margin-top:auto">
+          <button type="submit" class="btn btn-primary">Create Game</button>
+        </form>
+      </div>
+
     </div>
   </section>
 
@@ -81,8 +90,8 @@
 </div>
 
 <script>
-  var typeNames = { pokemon: 'Pokémon Name', knockout: 'Knockout', animequotes: 'Anime Quote' };
-  var joinUrls  = { pokemon: '/games/pokemon/', knockout: '/games/knockout/', animequotes: '/games/animequotes/' };
+  var typeNames = { pokemon: 'Pokémon Name', knockout: 'Knockout', animequotes: 'Anime Quote', zombie: '🧟 Zombie Horde' };
+  var joinUrls  = { pokemon: '/games/pokemon/', knockout: '/games/knockout/', animequotes: '/games/animequotes/', zombie: '/games/zombie/' };
   var knownIds  = '<%= openLobbies.map(function(g){return g.type+g.id}).join(",") %>';
 
   function renderLobbies(lobbies) {

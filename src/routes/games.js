@@ -22,6 +22,7 @@ function cleanStaleLobbies(db) {
     { type: 'pokemon',      gameTable: 'pokemon_games',    playerTable: 'pokemon_game_players' },
     { type: 'knockout',     gameTable: 'knockout_games',   playerTable: 'knockout_players' },
     { type: 'animequotes',  gameTable: 'animequote_games', playerTable: 'animequote_players' },
+    { type: 'zombie',       gameTable: 'zombie_games',     playerTable: 'zombie_players' },
   ].forEach(({ type, gameTable, playerTable }) => {
     const stale = db.prepare(
       `SELECT game_id FROM lobby_heartbeats WHERE game_type = ? AND last_seen < ${threshold}`
@@ -111,7 +112,19 @@ function getFriendLobbies(db, userId) {
     ORDER BY ag.created_at DESC
   `).all(...friendIds, userId);
 
-  return [...pokemonLobbies, ...knockoutLobbies, ...animeLobbies].sort((a, b) => b.id - a.id);
+  const zombieLobbies = db.prepare(`
+    SELECT zg.id, 'zombie' as type, u.display_name as host_name, u.avatar_url as host_avatar,
+      (SELECT COUNT(*) FROM zombie_players WHERE game_id = zg.id) as player_count,
+      NULL as subtitle
+    FROM zombie_games zg
+    JOIN users u ON u.id = zg.created_by
+    WHERE zg.status = 'waiting' AND zg.created_by IN (${ph})
+      AND zg.created_at > datetime('now', '-1 hour')
+      AND zg.id NOT IN (SELECT game_id FROM zombie_players WHERE user_id = ?)
+    ORDER BY zg.created_at DESC
+  `).all(...friendIds, userId);
+
+  return [...pokemonLobbies, ...knockoutLobbies, ...animeLobbies, ...zombieLobbies].sort((a, b) => b.id - a.id);
 }
 
 // GET /games

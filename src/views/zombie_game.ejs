@@ -1,0 +1,364 @@
+<%- include('header') %>
+<div class="zombie-page">
+
+  <h1>🧟 Zombie Horde</h1>
+
+  <%# ── WAITING LOBBY ──────────────────────────────── %>
+  <% if (game.status === 'waiting') { %>
+    <p class="puzzle-date">Game #<%= game.id %> &nbsp;·&nbsp; Co-op Survival</p>
+    <section class="dash-section">
+      <h2>Assemble your squad</h2>
+      <p class="text-sm" style="margin-bottom:1rem">Share this game ID with friends:</p>
+      <div class="game-code"><%= game.id %></div>
+
+      <div class="member-list" style="margin:1.5rem 0">
+        <% players.forEach(function(p) { %>
+          <div class="member-card">
+            <img src="<%= p.avatar_url || '' %>" alt="" class="member-avatar" onerror="this.style.display='none'">
+            <div class="member-info"><strong><%= p.display_name %></strong></div>
+            <% if (p.user_id === game.created_by) { %><span class="badge">Host</span><% } %>
+          </div>
+        <% }) %>
+      </div>
+
+      <% if (!myPlayer) { %>
+        <form action="/games/zombie/<%= game.id %>/join" method="POST">
+          <button type="submit" class="btn btn-primary">Join Game</button>
+        </form>
+      <% } else if (user.id === game.created_by) { %>
+        <span id="lobby-ping" data-type="zombie" data-id="<%= game.id %>" style="display:none"></span>
+        <p class="text-sm" style="margin-bottom:0.75rem">
+          Round 1 starts with 1 zombie. Each wave you clear adds another.
+        </p>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <form action="/games/zombie/<%= game.id %>/start" method="POST">
+            <button type="submit" class="btn btn-primary">Start Game</button>
+          </form>
+          <form action="/games/zombie/<%= game.id %>/cancel" method="POST">
+            <button type="submit" class="btn btn-danger">Close Lobby</button>
+          </form>
+        </div>
+      <% } else { %>
+        <p class="text-sm">Waiting for the host to start...</p>
+      <% } %>
+    </section>
+    <script>setTimeout(function() { window.location.reload(); }, 4000);</script>
+
+  <%# ── ACTIVE / COMPLETED ─────────────────────────── %>
+  <% } else if (round) { %>
+    <%
+      var guessesUsed = guesses.length;
+      var guessesLeft = round.max_guesses - guessesUsed;
+      var proximityPct = Math.round(guessesUsed / round.max_guesses * 100);
+    %>
+
+    <p class="puzzle-date">
+      Wave <%= game.current_round %> &nbsp;·&nbsp;
+      <%= wordCount %> zombie<%= wordCount !== 1 ? 's' : '' %> &nbsp;·&nbsp;
+      <%= game.rounds_survived %> wave<%= game.rounds_survived !== 1 ? 's' : '' %> survived
+    </p>
+
+    <%# Proximity meter %>
+    <div class="zombie-proximity-wrap">
+      <div class="zombie-proximity-label">
+        <span>🧟 PROXIMITY</span>
+        <span id="guesses-left-label"><%= guessesLeft %> guess<%= guessesLeft !== 1 ? 'es' : '' %> remaining</span>
+      </div>
+      <div class="zombie-proximity-bar">
+        <div class="zombie-proximity-fill" id="proximity-fill" style="width:<%= proximityPct %>%"></div>
+      </div>
+    </div>
+
+    <%# Zombie boards %>
+    <div class="zombie-horde-grid" id="zombie-horde-grid"
+         data-status="<%= game.status %>"
+         data-round="<%= game.current_round %>"
+         data-count="<%= wordCount %>">
+
+      <% for (var b = 0; b < wordCount; b++) { %>
+        <% var beaten = solvedMask.indexOf(b) !== -1; %>
+        <div class="zombie-board-wrap <%= beaten ? 'zombie-beaten' : '' %>" id="zombie-wrap-<%= b %>">
+          <div class="zombie-label">
+            <% if (beaten) { %>💀 ZOMBIE <%= b + 1 %> SLAIN<% } else { %>🧟 ZOMBIE <%= b + 1 %><% } %>
+          </div>
+          <div class="board zombie-board" id="zombie-board-<%= b %>">
+            <% guesses.forEach(function(g) { %>
+              <div class="row" data-filled="1">
+                <% g.results[b].forEach(function(r) { %>
+                  <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
+                <% }) %>
+              </div>
+            <% }) %>
+            <% if (!beaten && game.status === 'active') { %>
+              <% for (var j = guesses.length; j < round.max_guesses; j++) { %>
+                <div class="row">
+                  <% for (var k = 0; k < 5; k++) { %>
+                    <div class="tile tile-empty"></div>
+                  <% } %>
+                </div>
+              <% } %>
+            <% } %>
+          </div>
+          <% if (revealWords && !beaten) { %>
+            <div class="zombie-reveal">THE WORD WAS <strong><%= revealWords[b] %></strong></div>
+          <% } %>
+        </div>
+      <% } %>
+
+    </div>
+
+    <%# Game over %>
+    <% if (game.status === 'completed') { %>
+      <div class="result-message fail" style="text-align:center;margin:1.5rem 0">
+        🧟 OVERRUN — You survived <%= game.rounds_survived %> wave<%= game.rounds_survived !== 1 ? 's' : '' %>
+      </div>
+      <div style="text-align:center;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem">
+        <form action="/games/zombie" method="POST">
+          <button type="submit" class="btn btn-primary">Try Again</button>
+        </form>
+        <a href="/games" class="btn">Games</a>
+      </div>
+    <% } %>
+
+    <%# Guess input %>
+    <% if (canGuess) { %>
+      <form id="zombie-guess-form" style="margin:0" data-game-id="<%= game.id %>">
+        <input type="text" id="zombie-guess-input" maxlength="5"
+               autocomplete="off" spellcheck="false" inputmode="none" style="display:none">
+      </form>
+      <div id="zombie-error" class="error-msg" style="text-align:center"></div>
+      <div id="game-keyboard" data-board="zombie-board-0" data-input="zombie-guess-input" data-form="zombie-guess-form"></div>
+    <% } %>
+
+    <%# Players %>
+    <section class="dash-section" style="margin-top:2rem">
+      <h2>Squad</h2>
+      <div class="player-status-list">
+        <% players.forEach(function(p) { %>
+          <div class="player-status-item">
+            <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+            <span><%= p.display_name %></span>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+
+  <% } %>
+</div>
+
+<% if (game.status !== 'waiting' && round) { %>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var GAME_ID = '<%= game.id %>';
+  var CURRENT_ROUND = <%= game.current_round %>;
+  var WORD_COUNT = <%= wordCount %>;
+  var MAX_GUESSES = <%= round ? round.max_guesses : 6 %>;
+  var guessesUsed = <%= guesses.length %>;
+  var submitting = false;
+
+  var guessForm = document.getElementById('zombie-guess-form');
+  var errorEl = document.getElementById('zombie-error');
+
+  // Merged keyboard colors from all zombie boards
+  function updateZombieKeyboard() {
+    var priority = { green: 3, yellow: 2, gray: 1 };
+    var best = {};
+    for (var b = 0; b < WORD_COUNT; b++) {
+      var board = document.getElementById('zombie-board-' + b);
+      if (!board) continue;
+      board.querySelectorAll('.row[data-filled] .tile').forEach(function(tile) {
+        var letter = tile.textContent.trim();
+        if (!letter) return;
+        var cls = null;
+        tile.classList.forEach(function(c) { if (c !== 'tile' && c.startsWith('tile-') && c !== 'tile-flip') cls = c; });
+        if (!cls) return;
+        var status = cls.replace('tile-', '');
+        if (!priority[status]) return;
+        if (!best[letter] || priority[status] > priority[best[letter]]) best[letter] = status;
+      });
+    }
+    document.querySelectorAll('.key[data-key]').forEach(function(key) {
+      var l = key.getAttribute('data-key');
+      if (best[l]) key.className = 'key key-' + best[l];
+    });
+  }
+
+  // Override the generic keyboard updater with zombie version
+  window.updateKeyboardColors = updateZombieKeyboard;
+
+  // Point keyboard data-board at the first unsolved board for syncKeyboardTiles
+  function refreshKeyboardTarget() {
+    var kb = document.getElementById('game-keyboard');
+    if (!kb) return;
+    for (var b = 0; b < WORD_COUNT; b++) {
+      var wrap = document.getElementById('zombie-wrap-' + b);
+      if (wrap && !wrap.classList.contains('zombie-beaten')) {
+        kb.setAttribute('data-board', 'zombie-board-' + b);
+        return;
+      }
+    }
+  }
+  refreshKeyboardTarget();
+
+  function updateProximityBar(used, max) {
+    var fill = document.getElementById('proximity-fill');
+    var label = document.getElementById('guesses-left-label');
+    if (fill) fill.style.width = Math.round(used / max * 100) + '%';
+    if (label) {
+      var left = max - used;
+      label.textContent = left + ' guess' + (left !== 1 ? 'es' : '') + ' remaining';
+    }
+  }
+
+  function shakeBoards() {
+    document.querySelectorAll('.zombie-board-wrap:not(.zombie-beaten) .board').forEach(function(b) {
+      b.classList.remove('board-shake');
+      void b.offsetWidth;
+      b.classList.add('board-shake');
+      setTimeout(function() { b.classList.remove('board-shake'); }, 500);
+    });
+  }
+
+  function animateGuess(results, animated) {
+    var FLIP_DELAY = 80, FLIP_DUR = 175;
+    for (var b = 0; b < results.length; b++) {
+      (function(bi, result) {
+        var board = document.getElementById('zombie-board-' + bi);
+        if (!board) return;
+        var row = board.querySelector('.row:not([data-filled])');
+        if (!row) return;
+        row.setAttribute('data-filled', '1');
+        var tiles = row.querySelectorAll('.tile');
+        result.forEach(function(r, i) {
+          if (animated) {
+            (function(tile, delay) {
+              setTimeout(function() {
+                tile.classList.add('tile-flip');
+                setTimeout(function() { tile.className = 'tile tile-' + r.status; tile.textContent = r.letter; }, FLIP_DUR);
+              }, delay);
+            })(tiles[i], i * FLIP_DELAY);
+          } else {
+            tiles[i].className = 'tile tile-' + r.status;
+            tiles[i].textContent = r.letter;
+          }
+        });
+      })(b, results[b]);
+    }
+    return animated ? (results[0].length * FLIP_DELAY + FLIP_DUR) : 0;
+  }
+
+  function markSolvedBoards(solvedMask) {
+    for (var i = 0; i < solvedMask.length; i++) {
+      var bi = solvedMask[i];
+      var wrap = document.getElementById('zombie-wrap-' + bi);
+      if (wrap && !wrap.classList.contains('zombie-beaten')) {
+        wrap.classList.add('zombie-beaten');
+        var lbl = wrap.querySelector('.zombie-label');
+        if (lbl) lbl.textContent = '💀 ZOMBIE ' + (bi + 1) + ' SLAIN';
+      }
+    }
+    refreshKeyboardTarget();
+  }
+
+  function showBanner(msg, bg, fg) {
+    var el = document.createElement('div');
+    el.style.cssText = [
+      'position:fixed', 'top:50%', 'left:50%', 'transform:translate(-50%,-50%)',
+      'background:' + bg, 'color:' + (fg || '#000'), 'padding:1.25rem 2.5rem',
+      'border-radius:4px', 'font-family:var(--font-display)', 'font-size:clamp(1.4rem,5vw,2.2rem)',
+      'letter-spacing:.08em', 'z-index:1000', 'text-align:center', 'pointer-events:none',
+      'box-shadow:0 8px 40px rgba(0,0,0,0.5)',
+    ].join(';');
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function() {
+      el.style.transition = 'opacity 0.4s';
+      el.style.opacity = '0';
+      setTimeout(function() { el.remove(); }, 400);
+    }, 1600);
+  }
+
+  if (guessForm) {
+    guessForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (submitting) return;
+      var input = document.getElementById('zombie-guess-input');
+      var guess = input.value.trim().toUpperCase().replace(/[^A-Z]/g, '');
+      if (guess.length !== 5) return;
+
+      submitting = true;
+      errorEl.textContent = '';
+
+      fetch('/games/zombie/' + GAME_ID + '/guess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guess: guess }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) {
+          errorEl.textContent = data.error;
+          shakeBoards();
+          submitting = false;
+          return;
+        }
+
+        input.value = '';
+        if (window.syncKeyboardTiles) window.syncKeyboardTiles();
+
+        var dur = animateGuess(data.results, true);
+        guessesUsed++;
+        updateProximityBar(guessesUsed, MAX_GUESSES);
+
+        setTimeout(function() {
+          markSolvedBoards(data.solvedMask);
+          updateZombieKeyboard();
+
+          if (data.gameOver) {
+            showBanner('🧟 OVERRUN!', '#ef4444', '#fff');
+            setTimeout(function() { window.location.reload(); }, 2200);
+          } else if (data.roundOutcome === 'survived') {
+            showBanner('WAVE CLEARED! 🔥', '#a8ef40', '#000');
+            setTimeout(function() { window.location.reload(); }, 2200);
+          } else {
+            submitting = false;
+          }
+        }, dur + 200);
+      })
+      .catch(function() {
+        errorEl.textContent = 'Error submitting guess';
+        shakeBoards();
+        submitting = false;
+      });
+    });
+  }
+
+  // SSE – co-op real-time (see other players' guesses instantly)
+  var hordeGrid = document.getElementById('zombie-horde-grid');
+  if (hordeGrid && hordeGrid.getAttribute('data-status') === 'active') {
+    var evtSource = new EventSource('/games/zombie/' + GAME_ID + '/events');
+    evtSource.onmessage = function(e) {
+      if (submitting) return;
+      var data = JSON.parse(e.data);
+      if (!data) return;
+      if (data.status === 'completed') { evtSource.close(); window.location.reload(); return; }
+      if (data.currentRound && data.currentRound !== CURRENT_ROUND) { evtSource.close(); window.location.reload(); return; }
+      if (!data.guesses || !data.round) return;
+      var localCount = (document.querySelector('#zombie-board-0 .row[data-filled]') ? document.querySelectorAll('#zombie-board-0 .row[data-filled]').length : 0);
+      if (data.guesses.length > localCount) {
+        for (var i = localCount; i < data.guesses.length; i++) {
+          animateGuess(data.guesses[i].results, false);
+          guessesUsed++;
+        }
+        updateProximityBar(guessesUsed, MAX_GUESSES);
+        markSolvedBoards(data.round.solvedMask);
+        updateZombieKeyboard();
+      }
+    };
+    window.addEventListener('beforeunload', function() { evtSource.close(); });
+  }
+});
+</script>
+<% } %>
+
+<%- include('footer') %>
