@@ -1173,7 +1173,17 @@ code {
 }
 .key-green  { background: var(--green);  border-color: var(--green);  color: #000; }
 .key-yellow { background: var(--yellow); border-color: var(--yellow); color: #000; }
-.key-gray   { background: #111118; border-color: #111118; color: var(--text-dim); }
+.key-gray   { background: #232330; border-color: #232330; color: #44445a; }
+
+@keyframes boardShake {
+  0%, 100% { transform: translateX(0); }
+  15%       { transform: translateX(-6px); }
+  30%       { transform: translateX(6px); }
+  45%       { transform: translateX(-4px); }
+  60%       { transform: translateX(4px); }
+  75%       { transform: translateX(-2px); }
+}
+.board-shake { animation: boardShake 0.4s ease; }
 
 .tile-active {
   border-color: var(--text-mid) !important;

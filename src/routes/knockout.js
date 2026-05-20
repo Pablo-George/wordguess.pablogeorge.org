@@ -2,6 +2,7 @@ const express = require('express');
 const { getDb } = require('../db/database');
 const { ensureAuth } = require('../services/authService');
 const { ANSWERS } = require('../data/answers');
+const { isValidWord } = require('../services/wordService');
 
 const router = express.Router();
 const MAX_GUESSES = 6;
@@ -216,7 +217,7 @@ router.post('/games/knockout/:id/start', ensureAuth, (req, res) => {
 });
 
 // POST /games/knockout/:id/guess
-router.post('/games/knockout/:id/guess', ensureAuth, (req, res) => {
+router.post('/games/knockout/:id/guess', ensureAuth, async (req, res) => {
   const db = getDb();
   let game = db.prepare('SELECT * FROM knockout_games WHERE id = ?').get(req.params.id);
   if (!game) return res.json({ error: 'Game not found' });
@@ -239,6 +240,7 @@ router.post('/games/knockout/:id/guess', ensureAuth, (req, res) => {
 
   const guess = (req.body.guess || '').toUpperCase().trim();
   if (!/^[A-Z]{5}$/.test(guess)) return res.json({ error: 'Must be a 5-letter word' });
+  if (!(await isValidWord(guess))) return res.json({ error: 'Not a valid word' });
 
   const result = computeFeedback(guess, round.word);
   const solved = guess === round.word;

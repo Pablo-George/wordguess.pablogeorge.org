@@ -7,6 +7,21 @@
     e.preventDefault();
   });
 
+  function shakeBoard(boardId) {
+    var b = document.getElementById(boardId);
+    if (!b) return;
+    b.classList.remove('board-shake');
+    void b.offsetWidth; // reflow to restart animation
+    b.classList.add('board-shake');
+    setTimeout(function() { b.classList.remove('board-shake'); }, 400);
+  }
+
+  function rejectGuess(boardId, errorEl, msg) {
+    if (errorEl) errorEl.textContent = msg;
+    shakeBoard(boardId);
+    if (window.syncKeyboardTiles) window.syncKeyboardTiles();
+  }
+
   // Daily puzzle guesses
   var guessForm = document.getElementById('guess-form');
   if (guessForm) {
@@ -24,13 +39,13 @@
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.error) {
-          document.getElementById('error-msg').textContent = data.error;
+          rejectGuess('board', document.getElementById('error-msg'), data.error);
           return;
         }
         window.location.reload();
       })
       .catch(function() {
-        document.getElementById('error-msg').textContent = 'Error submitting guess';
+        rejectGuess('board', document.getElementById('error-msg'), 'Error submitting guess');
       });
     });
   }
@@ -60,7 +75,7 @@
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.error) {
-          errorEl.textContent = data.error;
+          rejectGuess('classic-board', errorEl, data.error);
           classicSubmitting = false;
           if (btn) btn.disabled = false;
           return;
@@ -122,7 +137,7 @@
         }, totalDelay);
       })
       .catch(function() {
-        errorEl.textContent = 'Error submitting guess';
+        rejectGuess('classic-board', errorEl, 'Error submitting guess');
         classicSubmitting = false;
         if (btn) btn.disabled = false;
       });
@@ -175,10 +190,10 @@
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (data.error) { document.getElementById('aq-error').textContent = data.error; return; }
+        if (data.error) { rejectGuess('aq-board', document.getElementById('aq-error'), data.error); return; }
         window.location.reload();
       })
-      .catch(function() { document.getElementById('aq-error').textContent = 'Error'; });
+      .catch(function() { rejectGuess('aq-board', document.getElementById('aq-error'), 'Error'); });
     });
   }
 
@@ -198,10 +213,10 @@
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (data.error) { document.getElementById('knockout-error').textContent = data.error; return; }
+        if (data.error) { rejectGuess('knockout-board', document.getElementById('knockout-error'), data.error); return; }
         window.location.reload();
       })
-      .catch(function() { document.getElementById('knockout-error').textContent = 'Error'; });
+      .catch(function() { rejectGuess('knockout-board', document.getElementById('knockout-error'), 'Error'); });
     });
   }
 
@@ -231,7 +246,7 @@
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.error) {
-          errorEl.textContent = data.error;
+          rejectGuess('pokemon-board', errorEl, data.error);
           pokemonSubmitting = false;
           if (btn) btn.disabled = false;
           return;
@@ -293,7 +308,7 @@
         }, totalDelay);
       })
       .catch(function() {
-        errorEl.textContent = 'Error submitting guess';
+        rejectGuess('pokemon-board', errorEl, 'Error submitting guess');
         pokemonSubmitting = false;
         if (btn) btn.disabled = false;
       });
