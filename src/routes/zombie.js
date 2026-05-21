@@ -138,8 +138,6 @@ async function preGenerateRound(db, gameId, nextRound) {
   const wordCount = Math.max(1, nextRound - shieldCount);
 
   const generated = await generateZombieTheme(wordCount, wordLen);
-  const valid = await Promise.all(generated.words.map(w => isValidWord(w)));
-  if (!valid.every(Boolean)) throw new Error('pre-gen: Gemini returned invalid words');
 
   // Don't store if game ended while we were generating
   const gameNow = db.prepare('SELECT status FROM zombie_games WHERE id = ?').get(gameId);
@@ -179,9 +177,8 @@ async function startRound(db, gameId, roundNumber, themeEnabled = true, guessSca
     if (themeEnabled) {
       try {
         const generated = await generateZombieTheme(wordCount, wordLen);
-        const valid = await Promise.all(generated.words.map(w => isValidWord(w)));
-        if (valid.every(Boolean)) { words = generated.words; theme = generated.theme; }
-        else throw new Error('Invalid words from Gemini');
+        words = generated.words;
+        theme = generated.theme;
       } catch (err) {
         console.warn('[zombie] theme gen failed, using local pool:', err.message);
         words = pickWords(db, gameId, wordCount, wordLen);
