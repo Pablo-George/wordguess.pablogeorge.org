@@ -1354,8 +1354,17 @@ code {
 .board-shake { animation: boardShake 0.4s ease; }
 
 .tile-active {
-  border-color: var(--text-mid) !important;
-  color: var(--text) !important;
+  border-color: var(--player-color, var(--text-mid)) !important;
+  color: var(--player-color, var(--text)) !important;
+}
+
+.player-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  margin-right: 0.5rem;
 }
 
 /* ── RESPONSIVE ──────────────────────────────── */

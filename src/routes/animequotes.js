@@ -7,6 +7,7 @@ const { broadcast } = require('../ws/wsServer');
 
 const router = express.Router();
 const MAX_GUESSES = 6;
+const PLAYER_COLORS = ['#4a90e2', '#f5a623', '#7ed321', '#9013fe', '#f5426e', '#17b8be'];
 
 const ANIME_LIST = [
   'Attack on Titan', 'Naruto', 'One Piece', 'Demon Slayer', 'Death Note',
@@ -91,7 +92,7 @@ router.get('/games/animequotes/:id', ensureAuth, (req, res) => {
     SELECT aqp.*, u.display_name, u.avatar_url
     FROM animequote_players aqp JOIN users u ON u.id = aqp.user_id
     WHERE aqp.game_id = ? ORDER BY aqp.joined_at ASC
-  `).all(game.id);
+  `).all(game.id).map((p, i) => ({ ...p, color: PLAYER_COLORS[i % PLAYER_COLORS.length] }));
 
   const myPlayer = players.find(p => p.user_id === req.user.id) || null;
   const quoteWords = game.status !== 'waiting'
@@ -209,7 +210,9 @@ router.post('/games/animequotes/:id/guess', ensureAuth, async (req, res) => {
   }
 
   checkGameComplete(db, game.id);
-  broadcast('animequotes', game.id, animequoteGameState(db, game.id));
+  const state = animequoteGameState(db, game.id);
+  state.lastGuess = { wordId: word.id, result, userId: req.user.id };
+  broadcast('animequotes', game.id, state);
   res.json({ ok: true });
 });
 
@@ -219,8 +222,8 @@ function animequoteGameState(db, gameId) {
   const words = db.prepare('SELECT id, word_index, word, word_length, is_given, solved, revealed FROM animequote_words WHERE game_id = ? ORDER BY word_index ASC').all(gameId);
   const players = db.prepare(`
     SELECT aqp.user_id, u.display_name, u.avatar_url FROM animequote_players aqp
-    JOIN users u ON u.id = aqp.user_id WHERE aqp.game_id = ?
-  `).all(gameId);
+    JOIN users u ON u.id = aqp.user_id WHERE aqp.game_id = ? ORDER BY aqp.joined_at ASC
+  `).all(gameId).map((p, i) => ({ ...p, color: PLAYER_COLORS[i % PLAYER_COLORS.length] }));
   return { status: game.status, words, players };
 }
 

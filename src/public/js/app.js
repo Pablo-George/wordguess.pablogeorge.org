@@ -704,9 +704,13 @@
         if (i < val.length) {
           tile.textContent = val[i];
           tile.className = 'tile tile-active';
+          var c = window.tileColors && window.tileColors[i];
+          if (c) tile.style.setProperty('--player-color', c);
+          else tile.style.removeProperty('--player-color');
         } else {
           tile.textContent = '';
           tile.className = 'tile tile-empty';
+          tile.style.removeProperty('--player-color');
         }
       });
     }

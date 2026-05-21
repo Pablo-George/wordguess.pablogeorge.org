@@ -157,6 +157,7 @@
       <div class="player-status-list">
         <% players.forEach(function(p) { %>
           <div class="player-status-item">
+            <span class="player-color-dot" style="background:<%= p.color || '#888' %>"></span>
             <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
             <span style="flex:1"><%= p.display_name %></span>
           </div>
@@ -184,38 +185,61 @@ document.addEventListener('DOMContentLoaded', function() {
   var MY_UID         = '<%= user.id %>';
   var ACTIVE_WORD_ID = '<%= activeWord ? activeWord.id : "" %>';
 
+  // Player color map: userId -> hex color
+  var PLAYER_COLORS_MAP = {};
+  <% players.forEach(function(p) { %>
+  PLAYER_COLORS_MAP['<%= p.user_id %>'] = '<%= p.color || "#888" %>';
+  <% }) %>
+  var MY_COLOR = PLAYER_COLORS_MAP[String(MY_UID)] || '#888';
+
+  // Per-tile color tracking so each player's typed letters show in their color
+  window.tileColors = [];
+
   // ── GAME STATE UPDATES ──────────────────────────────────────
   var aqLayout = document.getElementById('quote-layout');
   window.wsJoin('animequotes', GAME_ID, function(data) {
     if (data.type === 'aq-key') {
-      // Co-op: apply another player's keystroke to our shared input
       if (String(data.userId) !== MY_UID && String(data.wordId) === ACTIVE_WORD_ID) {
-        applyKey(data.key);
+        applyKey(data.key, data.color);
       }
       return;
     }
     if (!data.words) return;
     if (data.status === 'completed') { window.location.reload(); return; }
-    if (!aqLayout) return;
-    data.words.forEach(function(w) {
-      var btn = aqLayout.querySelector('[data-word-id="' + w.id + '"]');
-      if (!btn) return;
-      if (w.solved && !btn.classList.contains('aq-word--solved')) {
-        btn.className = 'aq-word aq-word--solved'; btn.textContent = w.word;
-      } else if (w.revealed && !btn.classList.contains('aq-word--revealed')) {
-        btn.className = 'aq-word aq-word--revealed'; btn.textContent = w.word;
+
+    // Fill in the board row for a guess submitted by another player
+    if (data.lastGuess && String(data.lastGuess.wordId) === ACTIVE_WORD_ID) {
+      handleIncomingGuess(data.lastGuess);
+    }
+
+    if (aqLayout) {
+      data.words.forEach(function(w) {
+        var btn = aqLayout.querySelector('[data-word-id="' + w.id + '"]');
+        if (!btn) return;
+        if (w.solved && !btn.classList.contains('aq-word--solved')) {
+          btn.className = 'aq-word aq-word--solved'; btn.textContent = w.word;
+        } else if (w.revealed && !btn.classList.contains('aq-word--revealed')) {
+          btn.className = 'aq-word aq-word--revealed'; btn.textContent = w.word;
+        }
+      });
+      var totalGuessable = data.words.filter(function(w) { return !w.is_given; }).length;
+      var totalSolved    = data.words.filter(function(w) { return w.solved; }).length;
+      var fill = document.querySelector('.aq-progress-fill');
+      var lbl  = document.querySelector('.aq-progress .text-sm');
+      if (fill) fill.style.width = (totalGuessable > 0 ? Math.round(totalSolved / totalGuessable * 100) : 0) + '%';
+      if (lbl)  lbl.textContent  = totalSolved + '/' + totalGuessable + ' words solved';
+    }
+
+    // Reload if the word we're currently viewing is now solved or revealed
+    if (ACTIVE_WORD_ID) {
+      var activeWordState = data.words.find(function(w) { return String(w.id) === ACTIVE_WORD_ID; });
+      if (activeWordState && (activeWordState.solved || activeWordState.revealed)) {
+        setTimeout(function() { window.location.reload(); }, 1200);
       }
-    });
-    var totalGuessable = data.words.filter(function(w) { return !w.is_given; }).length;
-    var totalSolved    = data.words.filter(function(w) { return w.solved; }).length;
-    var fill = document.querySelector('.aq-progress-fill');
-    var lbl  = document.querySelector('.aq-progress .text-sm');
-    if (fill) fill.style.width = (totalGuessable > 0 ? Math.round(totalSolved / totalGuessable * 100) : 0) + '%';
-    if (lbl)  lbl.textContent  = totalSolved + '/' + totalGuessable + ' words solved';
+    }
   });
 
   // ── CO-OP KEY RELAY ─────────────────────────────────────────
-  // Intercept virtual keyboard clicks and relay the key to all players
   var kb = document.getElementById('game-keyboard');
   if (kb) {
     kb.addEventListener('click', function(e) {
@@ -223,47 +247,80 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!btn || !ACTIVE_WORD_ID) return;
       var txt = btn.textContent.trim();
       var key = txt === '⌫' ? 'BACKSPACE' : txt;
-      if (key !== 'Enter') relayKey(key);
+      if (key === 'Enter') return;
+      // Track which tile belongs to this player (IIFE has already updated inp.value)
+      var inp = document.getElementById('aq-guess-input');
+      if (inp) {
+        if (key === 'BACKSPACE') {
+          window.tileColors[inp.value.length] = null;
+        } else {
+          window.tileColors[inp.value.length - 1] = MY_COLOR;
+        }
+      }
+      relayKey(key);
     });
   }
-  // Physical keyboard
+
+  // Physical keyboard relay
   document.addEventListener('keydown', function(e) {
     if (e.ctrlKey || e.altKey || e.metaKey || !ACTIVE_WORD_ID) return;
     var key = e.key.toUpperCase();
-    if (key === 'BACKSPACE' || (key.length === 1 && /[A-Z]/.test(key))) relayKey(key);
+    if (key !== 'BACKSPACE' && !(key.length === 1 && /[A-Z]/.test(key))) return;
+    // Track tile color (IIFE has already processed the key and updated inp.value)
+    var inp = document.getElementById('aq-guess-input');
+    if (inp) {
+      if (key === 'BACKSPACE') {
+        window.tileColors[inp.value.length] = null;
+      } else {
+        window.tileColors[inp.value.length - 1] = MY_COLOR;
+      }
+    }
+    relayKey(key);
   });
 
   function relayKey(key) {
     if (!window.wsRelay) return;
-    window.wsRelay({ type: 'aq-key', userId: MY_UID, wordId: ACTIVE_WORD_ID, key: key });
+    window.wsRelay({ type: 'aq-key', userId: MY_UID, wordId: ACTIVE_WORD_ID, key: key, color: MY_COLOR });
   }
 
-  // Apply a relayed key from another player to our local shared input + board
-  function applyKey(key) {
+  // Apply a relayed key from another player and show it in their color
+  function applyKey(key, color) {
     var inp = document.getElementById('aq-guess-input');
     if (!inp) return;
     var maxLen = parseInt(inp.getAttribute('maxlength'), 10) || 5;
     if (key === 'BACKSPACE') {
-      inp.value = inp.value.slice(0, -1);
+      if (inp.value.length > 0) {
+        window.tileColors[inp.value.length - 1] = null;
+        inp.value = inp.value.slice(0, -1);
+      }
     } else if (key.length === 1 && /[A-Z]/.test(key) && inp.value.length < maxLen) {
+      window.tileColors[inp.value.length] = color || null;
       inp.value += key;
     }
-    syncActiveRow(inp);
+    if (window.syncKeyboardTiles) window.syncKeyboardTiles();
   }
 
-  // Mirror what the keyboard IIFE does in syncActiveTiles
-  function syncActiveRow(inp) {
-    var boardId = kb && kb.getAttribute('data-board');
-    var board   = boardId && document.getElementById(boardId);
+  // Fill in a guess row received from another player submitting a guess
+  function handleIncomingGuess(lastGuess) {
+    var board = document.getElementById('aq-board');
     if (!board) return;
-    var row   = board.querySelector('.row:not([data-filled])');
-    if (!row) return;
-    var tiles = row.querySelectorAll('.tile');
-    var val   = inp.value;
-    tiles.forEach(function(tile, i) {
-      tile.textContent = i < val.length ? val[i] : '';
-      tile.className   = i < val.length ? 'tile tile-active' : 'tile tile-empty';
+    var activeRow = board.querySelector('.row:not([data-filled])');
+    if (!activeRow) return;
+    activeRow.setAttribute('data-filled', '1');
+    var tiles = activeRow.querySelectorAll('.tile');
+    lastGuess.result.forEach(function(r, i) {
+      if (tiles[i]) {
+        tiles[i].className = 'tile tile-' + r.status;
+        tiles[i].textContent = r.letter;
+        tiles[i].style.removeProperty('--player-color');
+      }
     });
+    // Reset shared input state
+    var inp = document.getElementById('aq-guess-input');
+    if (inp) inp.value = '';
+    window.tileColors = [];
+    if (window.syncKeyboardTiles) window.syncKeyboardTiles();
+    if (window.updateKeyboardColors) window.updateKeyboardColors();
   }
 });
 </script>
