@@ -6,7 +6,7 @@
   <%# ── WAITING LOBBY ──────────────────────────────── %>
   <% if (game.status === 'waiting') { %>
     <p class="puzzle-date">Game #<%= game.id %> &nbsp;·&nbsp; Co-op Survival</p>
-    <section class="dash-section">
+    <section class="dash-section" id="lobby-section" data-game-type="zombie" data-game-id="<%= game.id %>" data-created-by="<%= game.created_by %>">
       <h2>Assemble your squad</h2>
 
       <div class="member-list" style="margin:1.5rem 0">
@@ -24,7 +24,6 @@
           <button type="submit" class="btn btn-primary">Join Game</button>
         </form>
       <% } else if (user.id === game.created_by) { %>
-        <span id="lobby-ping" data-type="zombie" data-id="<%= game.id %>" style="display:none"></span>
         <p class="text-sm" style="margin-bottom:0.75rem">
           Round 1 starts with 1 zombie. Each wave you clear adds another.
         </p>
@@ -40,7 +39,6 @@
         <p class="text-sm">Waiting for the host to start...</p>
       <% } %>
     </section>
-    <script>setTimeout(function() { window.location.reload(); }, 4000);</script>
 
   <%# ── ACTIVE / COMPLETED ─────────────────────────── %>
   <% } else if (round) { %>

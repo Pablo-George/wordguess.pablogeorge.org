@@ -496,21 +496,25 @@
     }
   }
 
-  // Host lobby heartbeat — keeps lobby alive while host is on the page
-  var lobbyPing = document.getElementById('lobby-ping');
-  if (lobbyPing) {
-    var pingType = lobbyPing.getAttribute('data-type');
-    var pingId   = lobbyPing.getAttribute('data-id');
-    function sendPing() {
-      if (document.hidden) return;
-      fetch('/games/lobby-ping', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: pingType, id: pingId })
-      }).catch(function() {});
-    }
-    sendPing();
-    setInterval(sendPing, 10000);
+  // Lobby real-time updates via WebSocket
+  var lobbySection = document.getElementById('lobby-section');
+  if (lobbySection) {
+    var lobbyGameType = lobbySection.getAttribute('data-game-type');
+    var lobbyGameId   = lobbySection.getAttribute('data-game-id');
+    var lobbyCreatedBy = parseInt(lobbySection.getAttribute('data-created-by'), 10);
+    window.wsJoin('lobby', lobbyGameType + ':' + lobbyGameId, function(data) {
+      if (data.status === 'active') { window.location.reload(); return; }
+      if (data.cancelled) { window.location.href = '/games'; return; }
+      if (data.players) updateLobbyPlayerList(data.players, data.created_by || lobbyCreatedBy);
+    });
+  }
+
+  // Friend request notifications
+  var friendsPage = document.getElementById('friends-user-id');
+  if (friendsPage) {
+    window.wsJoin('friends', friendsPage.getAttribute('data-user-id'), function(data) {
+      if (data.type === 'friend-request') window.location.reload();
+    });
   }
 
   // Hamburger menu
@@ -538,6 +542,19 @@
     table.parentNode.insertBefore(wrapper, table);
     wrapper.appendChild(table);
   });
+
+  // ── LOBBY HELPERS ─────────────────────────────────────────────
+  function updateLobbyPlayerList(players, createdBy) {
+    var list = document.querySelector('#lobby-section .member-list');
+    if (!list) return;
+    list.innerHTML = players.map(function(p) {
+      return '<div class="member-card">' +
+        '<img src="' + (p.avatar_url || '') + '" alt="" class="member-avatar" onerror="this.style.display=\'none\'">' +
+        '<div class="member-info"><strong>' + p.display_name + '</strong></div>' +
+        (p.user_id === createdBy ? '<span class="badge">Host</span>' : '') +
+        '</div>';
+    }).join('');
+  }
 
   // ── POKEMON REAL-TIME HELPERS ─────────────────────────────────
   function updatePokemonPlayers(data) {

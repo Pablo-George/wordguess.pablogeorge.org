@@ -5,7 +5,7 @@
   <p class="puzzle-date">Game #<%= game.id %></p>
 
   <% if (game.status === 'waiting') { %>
-    <section class="dash-section">
+    <section class="dash-section" id="lobby-section" data-game-type="pokemon" data-game-id="<%= game.id %>" data-created-by="<%= game.created_by %>">
       <h2>Waiting for players</h2>
 
       <div class="member-list" style="margin:1.5rem 0">
@@ -23,7 +23,6 @@
           <button type="submit" class="btn btn-primary">Join Game</button>
         </form>
       <% } else if (user.id === game.created_by) { %>
-        <span id="lobby-ping" data-type="pokemon" data-id="<%= game.id %>" style="display:none"></span>
         <p class="text-sm" style="margin-bottom:0.75rem">
           With <%= players.length %> player<%= players.length !== 1 ? 's' : '' %>, the name will be <strong><%= previewLength %> letters</strong>. More players = longer name.
         </p>
@@ -117,9 +116,5 @@
   <% } %>
 
 </div>
-
-<% if (game.status === 'waiting' && myPlayer) { %>
-<script>setTimeout(function() { window.location.reload(); }, 4000);</script>
-<% } %>
 
 <%- include('footer') %>

@@ -7,7 +7,7 @@
   <%# ── WAITING ──────────────────────────────────── %>
   <% if (game.status === 'waiting') { %>
 
-    <section class="dash-section">
+    <section class="dash-section" id="lobby-section" data-game-type="animequotes" data-game-id="<%= game.id %>" data-created-by="<%= game.created_by %>">
       <h2>Lobby</h2>
 
       <div class="member-list" style="margin:1.5rem 0">
@@ -25,7 +25,6 @@
           <button type="submit" class="btn btn-primary">Join Game</button>
         </form>
       <% } else if (user.id === game.created_by) { %>
-        <span id="lobby-ping" data-type="animequotes" data-id="<%= game.id %>" style="display:none"></span>
         <p class="text-sm" style="margin-bottom:0.75rem">
           <%= players.length %> player<%= players.length !== 1 ? 's' : '' %> →
           quote will be ~<%= [8,10,12,14,16,18,20][Math.min(players.length-1,6)] %> words
@@ -61,8 +60,6 @@
         <p class="text-sm">Waiting for the host to start...</p>
       <% } %>
     </section>
-
-    <script>setTimeout(function() { window.location.reload(); }, 4000);</script>
 
   <%# ── ACTIVE / COMPLETED ────────────────────────── %>
   <% } else { %>

@@ -86,14 +86,5 @@
     <% }) %>
   </section>
 </div>
-<script>
-  var knownIncoming = <%= incoming.length %>;
-  setInterval(function() {
-    if (document.hidden) return;
-    fetch('/friends/poll')
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (d.incoming !== knownIncoming) window.location.reload(); })
-      .catch(function() {});
-  }, 8000);
-</script>
+<span id="friends-user-id" data-user-id="<%= user.id %>" style="display:none"></span>
 <%- include('footer') %>

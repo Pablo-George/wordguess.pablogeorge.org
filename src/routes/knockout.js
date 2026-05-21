@@ -108,17 +108,15 @@ function advanceIfExpired(db, game) {
 }
 
 // GET /games/knockout/:id
-function isLobbyStale(db, gameId) {
-  const hb = db.prepare("SELECT last_seen FROM lobby_heartbeats WHERE game_type = 'knockout' AND game_id = ?").get(gameId);
-  if (!hb) return true;
-  return Date.now() - new Date(hb.last_seen + 'Z').getTime() > 25000;
+function isLobbyStale(game) {
+  return Date.now() - new Date(game.created_at + 'Z').getTime() > 10 * 60 * 1000;
 }
 
 router.get('/games/knockout/:id', ensureAuth, (req, res) => {
   const db = getDb();
   let game = db.prepare('SELECT * FROM knockout_games WHERE id = ?').get(req.params.id);
   if (!game) return res.redirect('/games');
-  if (game.status === 'waiting' && game.created_by !== req.user.id && isLobbyStale(db, game.id)) {
+  if (game.status === 'waiting' && game.created_by !== req.user.id && isLobbyStale(game)) {
     return res.redirect('/games');
   }
 
@@ -198,6 +196,9 @@ router.post('/games/knockout/:id/join', ensureAuth, (req, res) => {
   const game = db.prepare('SELECT * FROM knockout_games WHERE id = ?').get(req.params.id);
   if (!game || game.status !== 'waiting') return res.redirect('/games');
   db.prepare('INSERT OR IGNORE INTO knockout_players (game_id, user_id) VALUES (?, ?)').run(game.id, req.user.id);
+  const players = db.prepare('SELECT kp.user_id, u.display_name, u.avatar_url FROM knockout_players kp JOIN users u ON u.id = kp.user_id WHERE kp.game_id = ? ORDER BY kp.joined_at ASC').all(game.id);
+  broadcast('lobby', 'knockout:' + game.id, { players, created_by: game.created_by });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   res.redirect('/games/knockout/' + game.id);
 });
 
@@ -214,6 +215,8 @@ router.post('/games/knockout/:id/start', ensureAuth, (req, res) => {
   const endsAt = new Date(Date.now() + ROUND_MS).toISOString();
   db.prepare('INSERT INTO knockout_rounds (game_id, round_number, word) VALUES (?, 1, ?)').run(game.id, word);
   db.prepare("UPDATE knockout_games SET status = 'active', current_round = 1, round_ends_at = ? WHERE id = ?").run(endsAt, game.id);
+  broadcast('lobby', 'knockout:' + game.id, { status: 'active' });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   res.redirect('/games/knockout/' + game.id);
 });
 
@@ -283,6 +286,8 @@ router.post('/games/knockout/:id/cancel', ensureAuth, (req, res) => {
   if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
     return res.redirect('/games');
   }
+  broadcast('lobby', 'knockout:' + game.id, { cancelled: true });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   db.prepare('DELETE FROM knockout_players WHERE game_id = ?').run(game.id);
   db.prepare('DELETE FROM knockout_games WHERE id = ?').run(game.id);
   res.redirect('/games');

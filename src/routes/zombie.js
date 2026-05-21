@@ -50,10 +50,8 @@ function startRound(db, gameId, roundNumber) {
     .run(gameId, roundNumber, JSON.stringify(words), maxGuessesForRound(roundNumber));
 }
 
-function isLobbyStale(db, gameId) {
-  const hb = db.prepare("SELECT last_seen FROM lobby_heartbeats WHERE game_type = 'zombie' AND game_id = ?").get(gameId);
-  if (!hb) return true;
-  return Date.now() - new Date(hb.last_seen + 'Z').getTime() > 25000;
+function isLobbyStale(game) {
+  return Date.now() - new Date(game.created_at + 'Z').getTime() > 10 * 60 * 1000;
 }
 
 function zombieGameState(db, gameId) {
@@ -105,7 +103,7 @@ router.get('/games/zombie/:id', ensureAuth, (req, res) => {
   const db = getDb();
   const game = db.prepare('SELECT * FROM zombie_games WHERE id = ?').get(req.params.id);
   if (!game) return res.redirect('/games');
-  if (game.status === 'waiting' && game.created_by !== req.user.id && isLobbyStale(db, game.id)) {
+  if (game.status === 'waiting' && game.created_by !== req.user.id && isLobbyStale(game)) {
     return res.redirect('/games');
   }
   const players = db.prepare(`
@@ -144,6 +142,9 @@ router.post('/games/zombie/:id/join', ensureAuth, (req, res) => {
   const game = db.prepare('SELECT * FROM zombie_games WHERE id = ?').get(req.params.id);
   if (!game || game.status !== 'waiting') return res.redirect('/games');
   db.prepare('INSERT OR IGNORE INTO zombie_players (game_id, user_id) VALUES (?, ?)').run(game.id, req.user.id);
+  const players = db.prepare('SELECT zp.user_id, u.display_name, u.avatar_url FROM zombie_players zp JOIN users u ON u.id = zp.user_id WHERE zp.game_id = ? ORDER BY zp.joined_at ASC').all(game.id);
+  broadcast('lobby', 'zombie:' + game.id, { players, created_by: game.created_by });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   res.redirect('/games/zombie/' + game.id);
 });
 
@@ -156,6 +157,8 @@ router.post('/games/zombie/:id/start', ensureAuth, (req, res) => {
   }
   startRound(db, game.id, 1);
   db.prepare("UPDATE zombie_games SET status = 'active' WHERE id = ?").run(game.id);
+  broadcast('lobby', 'zombie:' + game.id, { status: 'active' });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   res.redirect('/games/zombie/' + game.id);
 });
 
@@ -241,6 +244,8 @@ router.post('/games/zombie/:id/cancel', ensureAuth, (req, res) => {
   if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
     return res.redirect('/games');
   }
+  broadcast('lobby', 'zombie:' + game.id, { cancelled: true });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   db.prepare('DELETE FROM zombie_players WHERE game_id = ?').run(game.id);
   db.prepare('DELETE FROM zombie_games WHERE id = ?').run(game.id);
   res.redirect('/games');

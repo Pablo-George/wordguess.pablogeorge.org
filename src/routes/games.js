@@ -8,12 +8,9 @@ const { broadcast } = require('../ws/wsServer');
 const POKEMON_BY_LENGTH = [...POKEMON_GEN1].filter(p => p.length >= 5).sort((a, b) => a.length - b.length || a.localeCompare(b));
 
 const router = express.Router();
-const LOBBY_STALE_MS = 25000; // 25s — host pings every 10s so 2 missed pings = stale
 
-function isLobbyStale(db, type, gameId) {
-  const hb = db.prepare('SELECT last_seen FROM lobby_heartbeats WHERE game_type = ? AND game_id = ?').get(type, gameId);
-  if (!hb) return true;
-  return Date.now() - new Date(hb.last_seen + 'Z').getTime() > LOBBY_STALE_MS;
+function isLobbyStale(game) {
+  return Date.now() - new Date(game.created_at + 'Z').getTime() > 10 * 60 * 1000;
 }
 
 function cleanStaleActiveGames(db) {
@@ -35,23 +32,18 @@ function cleanStaleActiveGames(db) {
 }
 
 function cleanStaleLobbies(db) {
-  const threshold = "datetime('now', '-25 seconds')";
   [
-    { type: 'pokemon',      gameTable: 'pokemon_games',    playerTable: 'pokemon_game_players' },
-    { type: 'knockout',     gameTable: 'knockout_games',   playerTable: 'knockout_players' },
-    { type: 'animequotes',  gameTable: 'animequote_games', playerTable: 'animequote_players' },
-    { type: 'zombie',       gameTable: 'zombie_games',     playerTable: 'zombie_players' },
-  ].forEach(({ type, gameTable, playerTable }) => {
+    { gameTable: 'pokemon_games',    playerTable: 'pokemon_game_players' },
+    { gameTable: 'knockout_games',   playerTable: 'knockout_players' },
+    { gameTable: 'animequote_games', playerTable: 'animequote_players' },
+    { gameTable: 'zombie_games',     playerTable: 'zombie_players' },
+  ].forEach(({ gameTable, playerTable }) => {
     const stale = db.prepare(
-      `SELECT game_id FROM lobby_heartbeats WHERE game_type = ? AND last_seen < ${threshold}`
-    ).all(type).map(r => r.game_id);
-    for (const id of stale) {
-      const game = db.prepare(`SELECT id FROM ${gameTable} WHERE id = ? AND status = 'waiting'`).get(id);
-      if (game) {
-        db.prepare(`DELETE FROM ${playerTable} WHERE game_id = ?`).run(id);
-        db.prepare(`DELETE FROM ${gameTable} WHERE id = ?`).run(id);
-      }
-      db.prepare('DELETE FROM lobby_heartbeats WHERE game_type = ? AND game_id = ?').run(type, id);
+      `SELECT id FROM ${gameTable} WHERE status = 'waiting' AND created_at < datetime('now', '-10 minutes')`
+    ).all();
+    for (const row of stale) {
+      db.prepare(`DELETE FROM ${playerTable} WHERE game_id = ?`).run(row.id);
+      db.prepare(`DELETE FROM ${gameTable} WHERE id = ?`).run(row.id);
     }
   });
 }
@@ -179,6 +171,7 @@ router.post('/games/pokemon', ensureAuth, (req, res) => {
   const db = getDb();
   const info = db.prepare('INSERT INTO pokemon_games (created_by) VALUES (?)').run(req.user.id);
   db.prepare('INSERT INTO pokemon_game_players (game_id, user_id) VALUES (?, ?)').run(info.lastInsertRowid, req.user.id);
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   res.redirect('/games/pokemon/' + info.lastInsertRowid);
 });
 
@@ -187,7 +180,7 @@ router.get('/games/pokemon/:id', ensureAuth, (req, res) => {
   const db = getDb();
   const game = db.prepare('SELECT * FROM pokemon_games WHERE id = ?').get(req.params.id);
   if (!game) return res.redirect('/games');
-  if (game.status === 'waiting' && game.created_by !== req.user.id && isLobbyStale(db, 'pokemon', game.id)) {
+  if (game.status === 'waiting' && game.created_by !== req.user.id && isLobbyStale(game)) {
     return res.redirect('/games');
   }
 
@@ -232,6 +225,9 @@ router.post('/games/pokemon/:id/join', ensureAuth, (req, res) => {
   const game = db.prepare('SELECT * FROM pokemon_games WHERE id = ?').get(req.params.id);
   if (!game || game.status !== 'waiting') return res.redirect('/games');
   db.prepare('INSERT OR IGNORE INTO pokemon_game_players (game_id, user_id) VALUES (?, ?)').run(game.id, req.user.id);
+  const players = db.prepare('SELECT pgp.user_id, u.display_name, u.avatar_url FROM pokemon_game_players pgp JOIN users u ON u.id = pgp.user_id WHERE pgp.game_id = ? ORDER BY pgp.joined_at ASC').all(game.id);
+  broadcast('lobby', 'pokemon:' + game.id, { players, created_by: game.created_by });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   res.redirect('/games/pokemon/' + game.id);
 });
 
@@ -251,22 +247,9 @@ router.post('/games/pokemon/:id/start', ensureAuth, (req, res) => {
     UPDATE pokemon_games SET status = 'active', pokemon_name = ?, pokemon_index = ?, word_length = ? WHERE id = ?
   `).run(pokemonName, pokemonIndex, pokemonName.length, game.id);
 
+  broadcast('lobby', 'pokemon:' + game.id, { status: 'active' });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   res.redirect('/games/pokemon/' + game.id);
-});
-
-// POST /games/lobby-ping — host heartbeat for waiting lobbies
-router.post('/games/lobby-ping', ensureAuth, (req, res) => {
-  const db = getDb();
-  const { type, id } = req.body;
-  const tables = { pokemon: 'pokemon_games', knockout: 'knockout_games', animequotes: 'animequote_games' };
-  if (!tables[type] || !id) return res.json({ ok: false });
-  const game = db.prepare(`SELECT * FROM ${tables[type]} WHERE id = ? AND status = 'waiting'`).get(id);
-  if (!game || game.created_by !== req.user.id) return res.json({ ok: false });
-  db.prepare(`
-    INSERT INTO lobby_heartbeats (game_type, game_id, last_seen) VALUES (?, ?, datetime('now'))
-    ON CONFLICT (game_type, game_id) DO UPDATE SET last_seen = datetime('now')
-  `).run(type, id);
-  res.json({ ok: true });
 });
 
 // GET /games/pokemon/:id/players — lightweight status poll
@@ -357,6 +340,8 @@ router.post('/games/pokemon/:id/cancel', ensureAuth, (req, res) => {
   if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
     return res.redirect('/games');
   }
+  broadcast('lobby', 'pokemon:' + game.id, { cancelled: true });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   db.prepare('DELETE FROM pokemon_game_players WHERE game_id = ?').run(game.id);
   db.prepare('DELETE FROM pokemon_games WHERE id = ?').run(game.id);
   res.redirect('/games');

@@ -115,8 +115,8 @@
     }).join('');
   }
 
-  setInterval(function() {
-    if (document.hidden) return;
+  window.wsJoin('lobby-updates', 'global', function(data) {
+    if (data.type !== 'lobby-changed') return;
     fetch('/games/lobbies')
       .then(function(r) { return r.json(); })
       .then(function(lobbies) {
@@ -127,6 +127,6 @@
         }
       })
       .catch(function() {});
-  }, 5000);
+  });
 </script>
 <%- include('footer') %>

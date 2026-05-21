@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../db/database');
 const { ensureAuth } = require('../services/authService');
+const { broadcast } = require('../ws/wsServer');
 
 const router = express.Router();
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -60,6 +61,7 @@ router.get('/friends/invite/:userId', ensureAuth, (req, res) => {
   if (existing) return res.redirect('/friends');
 
   db.prepare('INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, ?)').run(req.user.id, targetId, 'pending');
+  broadcast('friends', String(targetId), { type: 'friend-request' });
   res.redirect('/friends');
 });
 
@@ -79,6 +81,7 @@ router.post('/friends/add-by-code', ensureAuth, (req, res) => {
   }
 
   db.prepare('INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, ?)').run(req.user.id, target.id, 'pending');
+  broadcast('friends', String(target.id), { type: 'friend-request' });
   res.json({ success: true });
 });
 

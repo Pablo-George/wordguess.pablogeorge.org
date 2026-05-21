@@ -75,17 +75,15 @@ router.post('/games/animequotes', ensureAuth, (req, res) => {
 });
 
 // GET /games/animequotes/:id
-function isLobbyStale(db, gameId) {
-  const hb = db.prepare("SELECT last_seen FROM lobby_heartbeats WHERE game_type = 'animequotes' AND game_id = ?").get(gameId);
-  if (!hb) return true;
-  return Date.now() - new Date(hb.last_seen + 'Z').getTime() > 25000;
+function isLobbyStale(game) {
+  return Date.now() - new Date(game.created_at + 'Z').getTime() > 10 * 60 * 1000;
 }
 
 router.get('/games/animequotes/:id', ensureAuth, (req, res) => {
   const db = getDb();
   const game = db.prepare('SELECT * FROM animequote_games WHERE id = ?').get(req.params.id);
   if (!game) return res.redirect('/games');
-  if (game.status === 'waiting' && game.created_by !== req.user.id && isLobbyStale(db, game.id)) {
+  if (game.status === 'waiting' && game.created_by !== req.user.id && isLobbyStale(game)) {
     return res.redirect('/games');
   }
 
@@ -137,6 +135,9 @@ router.post('/games/animequotes/:id/join', ensureAuth, (req, res) => {
   const game = db.prepare('SELECT * FROM animequote_games WHERE id = ?').get(req.params.id);
   if (!game || game.status !== 'waiting') return res.redirect('/games');
   db.prepare('INSERT OR IGNORE INTO animequote_players (game_id, user_id) VALUES (?, ?)').run(game.id, req.user.id);
+  const players = db.prepare('SELECT aqp.user_id, u.display_name, u.avatar_url FROM animequote_players aqp JOIN users u ON u.id = aqp.user_id WHERE aqp.game_id = ? ORDER BY aqp.joined_at ASC').all(game.id);
+  broadcast('lobby', 'animequotes:' + game.id, { players, created_by: game.created_by });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   res.redirect('/games/animequotes/' + game.id);
 });
 
@@ -170,6 +171,8 @@ router.post('/games/animequotes/:id/start', ensureAuth, async (req, res) => {
     return res.status(500).send('Failed to generate quote: ' + err.message);
   }
 
+  broadcast('lobby', 'animequotes:' + game.id, { status: 'active' });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   res.redirect('/games/animequotes/' + game.id);
 });
 
@@ -228,6 +231,8 @@ router.post('/games/animequotes/:id/cancel', ensureAuth, (req, res) => {
   if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
     return res.redirect('/games');
   }
+  broadcast('lobby', 'animequotes:' + game.id, { cancelled: true });
+  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
   db.prepare('DELETE FROM animequote_players WHERE game_id = ?').run(game.id);
   db.prepare('DELETE FROM animequote_games WHERE id = ?').run(game.id);
   res.redirect('/games');
