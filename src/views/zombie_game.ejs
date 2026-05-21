@@ -301,13 +301,6 @@
           <%= game.rounds_survived %> wave<%= game.rounds_survived !== 1 ? 's' : '' %> survived
         </p>
 
-        <% if (theme) { %>
-          <div class="zombie-theme-banner">
-            <span class="zombie-theme-label">THEME</span>
-            <span class="zombie-theme-name"><%= theme %></span>
-          </div>
-        <% } %>
-
         <%# Passive perks bar %>
         <% if (passiveItems && passiveItems.length > 0) { %>
           <div class="zombie-passive-perks">
