@@ -68,7 +68,7 @@ function pickWords(db, gameId, count) {
   return out;
 }
 
-async function startRound(db, gameId, roundNumber, items = []) {
+async function startRound(db, gameId, roundNumber, items = [], themeEnabled = true) {
   const extraGuesses = items.filter(i => i.type === 'extra_guess').length
     + items.filter(i => i.type === 'guess_burst').length * 3;
   const shieldCount = items.filter(i => i.type === 'shield').length
@@ -76,13 +76,17 @@ async function startRound(db, gameId, roundNumber, items = []) {
   const wordCount = Math.max(1, roundNumber - shieldCount);
 
   let words, theme = null;
-  try {
-    const generated = await generateZombieTheme(wordCount);
-    const valid = await Promise.all(generated.words.map(w => isValidWord(w)));
-    if (valid.every(Boolean)) { words = generated.words; theme = generated.theme; }
-    else throw new Error('Invalid words from Gemini');
-  } catch (err) {
-    console.warn('Zombie theme generation failed, falling back:', err.message);
+  if (themeEnabled) {
+    try {
+      const generated = await generateZombieTheme(wordCount);
+      const valid = await Promise.all(generated.words.map(w => isValidWord(w)));
+      if (valid.every(Boolean)) { words = generated.words; theme = generated.theme; }
+      else throw new Error('Invalid words from Gemini');
+    } catch (err) {
+      console.warn('Zombie theme generation failed, falling back:', err.message);
+      words = pickWords(db, gameId, wordCount);
+    }
+  } else {
     words = pickWords(db, gameId, wordCount);
   }
 
@@ -277,7 +281,7 @@ router.post('/games/zombie/:id/start', ensureAuth, async (req, res) => {
   if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
     return res.redirect('/games/zombie/' + req.params.id);
   }
-  await startRound(db, game.id, 1);
+  await startRound(db, game.id, 1, [], game.theme_enabled !== 0);
   db.prepare("UPDATE zombie_games SET status = 'active' WHERE id = ?").run(game.id);
   broadcast('lobby', 'zombie:' + game.id, { status: 'active' });
   broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
@@ -349,7 +353,7 @@ router.post('/games/zombie/:id/guess', ensureAuth, async (req, res) => {
       db.prepare("UPDATE zombie_games SET status = 'shop', current_round = ?, rounds_survived = rounds_survived + 1, coins = coins + ?, shop_selections = ? WHERE id = ?")
         .run(next, coinsEarned, JSON.stringify(shopSelections), game.id);
     } else {
-      await startRound(db, game.id, next);
+      await startRound(db, game.id, next, [], game.theme_enabled !== 0);
       db.prepare("UPDATE zombie_games SET current_round = ?, rounds_survived = rounds_survived + 1, coins = coins + ? WHERE id = ?")
         .run(next, coinsEarned, game.id);
     }
@@ -409,10 +413,23 @@ router.post('/games/zombie/:id/shop/continue', ensureAuth, async (req, res) => {
   if (!myPlayer) return res.redirect('/games/zombie/' + req.params.id);
 
   const items = JSON.parse(game.shop_items || '[]');
-  await startRound(db, game.id, game.current_round, items);
+  await startRound(db, game.id, game.current_round, items, game.theme_enabled !== 0);
   db.prepare("UPDATE zombie_games SET status = 'active', shop_items = '[]', shop_selections = '[]' WHERE id = ?").run(game.id);
   broadcast('zombie', game.id, zombieGameState(db, game.id));
   res.redirect('/games/zombie/' + game.id);
+});
+
+// POST /games/zombie/:id/toggle-theme
+router.post('/games/zombie/:id/toggle-theme', ensureAuth, (req, res) => {
+  const db = getDb();
+  const game = db.prepare('SELECT * FROM zombie_games WHERE id = ?').get(req.params.id);
+  if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
+    return res.redirect('/games/zombie/' + req.params.id);
+  }
+  const newVal = game.theme_enabled === 0 ? 1 : 0;
+  db.prepare('UPDATE zombie_games SET theme_enabled = ? WHERE id = ?').run(newVal, game.id);
+  broadcast('lobby', 'zombie:' + game.id, { theme_enabled: newVal });
+  res.redirect('/games/zombie/' + req.params.id);
 });
 
 // POST /games/zombie/:id/cancel

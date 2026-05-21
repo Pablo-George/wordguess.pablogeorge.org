@@ -45,10 +45,30 @@
               <button type="submit" class="btn btn-primary">Join Game</button>
             </form>
           <% } else if (user.id === game.created_by) { %>
-            <p class="text-sm" style="margin-bottom:0.75rem">
+            <p class="text-sm" style="margin-bottom:1rem">
               Round 1 starts with 1 zombie. Each wave you clear adds another.
             </p>
-            <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+
+            <%# Theme toggle %>
+            <div class="zombie-lobby-setting">
+              <form action="/games/zombie/<%= game.id %>/toggle-theme" method="POST" style="margin:0">
+                <button type="submit" class="zombie-toggle<%= game.theme_enabled !== 0 ? ' zombie-toggle-on' : '' %>">
+                  <span class="zombie-toggle-knob"></span>
+                </button>
+              </form>
+              <div>
+                <div class="zombie-lobby-setting-label">Connections Mode</div>
+                <div class="zombie-lobby-setting-desc">
+                  <% if (game.theme_enabled !== 0) { %>
+                    AI picks a theme — all zombie words are related
+                  <% } else { %>
+                    Random words each round
+                  <% } %>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1rem">
               <form action="/games/zombie/<%= game.id %>/start" method="POST" id="zombie-start-form">
                 <button type="submit" class="btn btn-primary" id="zombie-start-btn">Start Game</button>
               </form>
@@ -60,10 +80,21 @@
             document.getElementById('zombie-start-form').addEventListener('submit', function() {
               var btn = document.getElementById('zombie-start-btn');
               btn.disabled = true;
-              btn.textContent = 'Picking themed words…';
+              btn.textContent = '<%= game.theme_enabled !== 0 ? "Picking themed words…" : "Starting…" %>';
             });
             </script>
           <% } else { %>
+            <div class="zombie-lobby-setting" style="margin-bottom:1rem">
+              <div class="zombie-toggle<%= game.theme_enabled !== 0 ? ' zombie-toggle-on' : '' %>" style="pointer-events:none">
+                <span class="zombie-toggle-knob"></span>
+              </div>
+              <div>
+                <div class="zombie-lobby-setting-label">Connections Mode</div>
+                <div class="zombie-lobby-setting-desc">
+                  <%= game.theme_enabled !== 0 ? 'AI picks a theme — all zombie words are related' : 'Random words each round' %>
+                </div>
+              </div>
+            </div>
             <p class="text-sm">Waiting for the host to start...</p>
           <% } %>
         </section>
