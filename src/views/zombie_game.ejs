@@ -132,6 +132,7 @@
       <div class="player-status-list">
         <% players.forEach(function(p) { %>
           <div class="player-status-item">
+            <span class="player-color-dot" style="background:<%= p.color || '#888' %>"></span>
             <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
             <span><%= p.display_name %></span>
           </div>
@@ -151,6 +152,15 @@ document.addEventListener('DOMContentLoaded', function() {
   var MAX_GUESSES = <%= round ? round.max_guesses : 6 %>;
   var guessesUsed = <%= guesses.length %>;
   var submitting = false;
+
+  // ── PLAYER COLORS ─────────────────────────────────────────
+  var MY_UID = '<%= user.id %>';
+  var PLAYER_COLORS_MAP = {};
+  <% players.forEach(function(p) { %>
+  PLAYER_COLORS_MAP['<%= p.user_id %>'] = '<%= p.color || "#888" %>';
+  <% }) %>
+  var MY_COLOR = PLAYER_COLORS_MAP[String(MY_UID)] || '#888';
+  window.tileColors = [];
 
   var guessForm = document.getElementById('zombie-guess-form');
   var errorEl = document.getElementById('zombie-error');
@@ -273,6 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         input.value = '';
+        window.tileColors = [];
         if (window.syncKeyboardTiles) window.syncKeyboardTiles();
 
         var dur = animateGuess(data.results, true);
@@ -302,16 +313,74 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // WebSocket – co-op real-time (see other players' guesses instantly)
+  // ── CO-OP KEY RELAY ─────────────────────────────────────────
+  var kb = document.getElementById('game-keyboard');
+  if (kb) {
+    kb.addEventListener('click', function(e) {
+      if (submitting) return;
+      var btn = e.target.closest('.key');
+      if (!btn) return;
+      var txt = btn.textContent.trim();
+      var key = txt === '⌫' ? 'BACKSPACE' : txt;
+      if (key === 'Enter') return;
+      var inp = document.getElementById('zombie-guess-input');
+      if (inp) {
+        if (key === 'BACKSPACE') { window.tileColors[inp.value.length] = null; }
+        else { window.tileColors[inp.value.length - 1] = MY_COLOR; }
+        if (window.syncKeyboardTiles) window.syncKeyboardTiles();
+      }
+      relayKey(key);
+    });
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (submitting || e.ctrlKey || e.altKey || e.metaKey) return;
+    var key = e.key.toUpperCase();
+    if (key !== 'BACKSPACE' && !(key.length === 1 && /[A-Z]/.test(key))) return;
+    var inp = document.getElementById('zombie-guess-input');
+    if (inp) {
+      if (key === 'BACKSPACE') { window.tileColors[inp.value.length] = null; }
+      else { window.tileColors[inp.value.length - 1] = MY_COLOR; }
+      if (window.syncKeyboardTiles) window.syncKeyboardTiles();
+    }
+    relayKey(key);
+  });
+
+  function relayKey(key) {
+    if (window.wsRelay) window.wsRelay({ type: 'zombie-key', userId: MY_UID, key: key, color: MY_COLOR });
+  }
+
+  function applyKey(key, color) {
+    var inp = document.getElementById('zombie-guess-input');
+    if (!inp) return;
+    if (key === 'BACKSPACE') {
+      if (inp.value.length > 0) { window.tileColors[inp.value.length - 1] = null; inp.value = inp.value.slice(0, -1); }
+    } else if (key.length === 1 && /[A-Z]/.test(key) && inp.value.length < 5) {
+      window.tileColors[inp.value.length] = color || null;
+      inp.value += key;
+    }
+    if (window.syncKeyboardTiles) window.syncKeyboardTiles();
+  }
+
+  // WebSocket – co-op real-time (see other players' guesses and keystrokes)
   var hordeGrid = document.getElementById('zombie-horde-grid');
   if (hordeGrid && hordeGrid.getAttribute('data-status') === 'active') {
     window.wsJoin('zombie', GAME_ID, function(data) {
+      if (data.type === 'zombie-key') {
+        if (!submitting && String(data.userId) !== MY_UID) applyKey(data.key, data.color);
+        return;
+      }
       if (submitting) return;
       if (data.status === 'completed') { window.location.reload(); return; }
       if (data.currentRound && data.currentRound !== CURRENT_ROUND) { window.location.reload(); return; }
       if (!data.guesses || !data.round) return;
       var localCount = document.querySelectorAll('#zombie-board-0 .row[data-filled]').length;
       if (data.guesses.length > localCount) {
+        // Clear typing preview before animating the incoming guess
+        var inp = document.getElementById('zombie-guess-input');
+        if (inp) inp.value = '';
+        window.tileColors = [];
+        if (window.syncKeyboardTiles) window.syncKeyboardTiles();
         for (var i = localCount; i < data.guesses.length; i++) {
           animateGuess(data.guesses[i].results, false);
           guessesUsed++;

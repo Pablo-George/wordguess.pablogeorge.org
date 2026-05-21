@@ -6,6 +6,7 @@ const { isValidWord } = require('../services/wordService');
 const { broadcast } = require('../ws/wsServer');
 
 const router = express.Router();
+const PLAYER_COLORS = ['#4a90e2', '#f5a623', '#7ed321', '#9013fe', '#f5426e', '#17b8be'];
 
 function computeFeedback(guess, answer) {
   const result = [];
@@ -60,8 +61,8 @@ function zombieGameState(db, gameId) {
   const round = db.prepare('SELECT * FROM zombie_rounds WHERE game_id = ? AND round_number = ?').get(gameId, game.current_round);
   const players = db.prepare(`
     SELECT zp.user_id, u.display_name, u.avatar_url
-    FROM zombie_players zp JOIN users u ON u.id = zp.user_id WHERE zp.game_id = ?
-  `).all(gameId);
+    FROM zombie_players zp JOIN users u ON u.id = zp.user_id WHERE zp.game_id = ? ORDER BY zp.joined_at ASC
+  `).all(gameId).map((p, i) => ({ ...p, color: PLAYER_COLORS[i % PLAYER_COLORS.length] }));
   let guesses = [], revealWords = null;
   if (round) {
     guesses = db.prepare(`
@@ -110,7 +111,7 @@ router.get('/games/zombie/:id', ensureAuth, (req, res) => {
     SELECT zp.*, u.display_name, u.avatar_url
     FROM zombie_players zp JOIN users u ON u.id = zp.user_id
     WHERE zp.game_id = ? ORDER BY zp.joined_at ASC
-  `).all(game.id);
+  `).all(game.id).map((p, i) => ({ ...p, color: PLAYER_COLORS[i % PLAYER_COLORS.length] }));
   const myPlayer = players.find(p => p.user_id === req.user.id) || null;
 
   let round = null, guesses = [], wordCount = 0, solvedMask = [], revealWords = null;
