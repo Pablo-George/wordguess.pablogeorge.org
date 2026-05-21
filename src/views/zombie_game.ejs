@@ -251,6 +251,11 @@
                   <span class="zombie-hint-badge">P<%= h.tileIndex + 1 %>:<%= h.letter %></span>
                 <% }) %>
               </div>
+              <% if (beaten && slayers && slayers[b]) { %>
+                <div class="zombie-slayer">⚔️ <%= slayers[b] %></div>
+              <% } else if (beaten) { %>
+                <div class="zombie-slayer" id="zombie-slayer-<%= b %>"></div>
+              <% } %>
               <div class="board zombie-board" id="zombie-board-<%= b %>">
                 <% guesses.forEach(function(g) { %>
                   <div class="row" data-filled="1">
@@ -418,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return animated ? (results[0].length * FLIP_DELAY + FLIP_DUR) : 0;
   }
 
-  function markSolvedBoards(solvedMask) {
+  function markSolvedBoards(solvedMask, slayers) {
     for (var i = 0; i < solvedMask.length; i++) {
       var bi = solvedMask[i];
       var wrap = document.getElementById('zombie-wrap-' + bi);
@@ -426,6 +431,11 @@ document.addEventListener('DOMContentLoaded', function() {
         wrap.classList.add('zombie-beaten');
         var lbl = wrap.querySelector('.zombie-label');
         if (lbl) lbl.textContent = '\u{1F480} ZOMBIE ' + (bi + 1) + ' SLAIN';
+      }
+      // Update slayer display
+      if (slayers && slayers[bi]) {
+        var slayerEl = document.getElementById('zombie-slayer-' + bi) || wrap && wrap.querySelector('.zombie-slayer');
+        if (slayerEl) slayerEl.textContent = '⚔️ ' + slayers[bi];
       }
     }
     refreshKeyboardTarget();
@@ -488,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateProximityBar(guessesUsed, MAX_GUESSES);
 
         setTimeout(function() {
-          markSolvedBoards(data.solvedMask);
+          markSolvedBoards(data.solvedMask, data.newSlayers);
           if (window.updateKeyboardColors) window.updateKeyboardColors();
 
           if (data.gameOver) {
@@ -582,7 +592,7 @@ document.addEventListener('DOMContentLoaded', function() {
           guessesUsed++;
         }
         updateProximityBar(guessesUsed, MAX_GUESSES);
-        markSolvedBoards(data.round.solvedMask);
+        markSolvedBoards(data.round.solvedMask, data.slayers);
         if (window.updateKeyboardColors) window.updateKeyboardColors();
       }
     });

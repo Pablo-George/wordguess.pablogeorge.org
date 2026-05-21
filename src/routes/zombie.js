@@ -155,6 +155,18 @@ async function startRound(db, gameId, roundNumber, items = [], themeEnabled = tr
     .run(gameId, roundNumber, JSON.stringify(words), maxGuesses, theme, hintTiles, safeGuesses);
 }
 
+function computeSlayers(guesses) {
+  const slayers = {};
+  for (const g of guesses) {
+    g.results.forEach((boardResult, b) => {
+      if (slayers[b] === undefined && boardResult.every(r => r.status === 'green')) {
+        slayers[b] = g.displayName || g.display_name;
+      }
+    });
+  }
+  return slayers;
+}
+
 function isLobbyStale(game) {
   return Date.now() - new Date(game.created_at + 'Z').getTime() > 10 * 60 * 1000;
 }
@@ -193,6 +205,7 @@ function zombieGameState(db, gameId) {
       theme: round.theme || null,
       safeGuesses: round.safe_guesses || 0,
     } : null,
+    slayers: computeSlayers(guesses),
     guesses,
     players,
     revealWords,
@@ -254,6 +267,8 @@ router.get('/games/zombie/:id', ensureAuth, (req, res) => {
       }))
     : [];
 
+  const slayers = computeSlayers(guesses);
+
   // Shop state
   const shopSelections = game.status === 'shop' ? JSON.parse(game.shop_selections || '[]') : [];
   const shopItems = JSON.parse(game.shop_items || '[]');
@@ -281,7 +296,7 @@ router.get('/games/zombie/:id', ensureAuth, (req, res) => {
   res.render('zombie_game', {
     title: 'Zombie Horde',
     game, players, myPlayer, round, guesses, wordCount, solvedMask, canGuess, revealWords,
-    theme, hints, priorRounds, shopSelections, shopItems, shopEarned, SHOP_ITEMS, leaderboard,
+    theme, hints, priorRounds, shopSelections, shopItems, shopEarned, SHOP_ITEMS, leaderboard, slayers,
   });
 });
 
@@ -391,11 +406,17 @@ router.post('/games/zombie/:id/guess', ensureAuth, async (req, res) => {
 
   broadcast('zombie', game.id, zombieGameState(db, game.id));
 
+  // Build slayer map for newly solved zombies (the submitting player slayed them)
+  const slayerName = db.prepare('SELECT display_name FROM users WHERE id = ?').get(req.user.id)?.display_name || 'Someone';
+  const newSlayers = {};
+  newlySolved.forEach(i => { newSlayers[i] = slayerName; });
+
   res.json({
     ok: true,
     results,
     solvedMask: newSolvedMask,
     newlySolved,
+    newSlayers,
     roundOutcome,
     gameOver,
     guessCount: newGuessCount,

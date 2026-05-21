@@ -1502,6 +1502,13 @@ code {
   color: #a8ef40;
 }
 
+.zombie-slayer {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin: 0.1rem 0 0.3rem;
+  min-height: 1em;
+}
+
 .zombie-board { margin: 0; }
 .zombie-board .tile { width: 52px; height: 52px; font-size: 1.75rem; }
 
