@@ -130,7 +130,6 @@
             <input type="text" id="aq-guess-input" maxlength="<%= activeWord.word_length %>"
               autocomplete="off" spellcheck="false" inputmode="none" style="display:none">
           </form>
-          <div id="aq-typing-wrap" class="aq-typing-wrap"></div>
           <div id="aq-error" class="error-msg" style="text-align:center"></div>
           <div id="game-keyboard" data-board="aq-board" data-input="aq-guess-input" data-form="aq-guess-form"></div>
         <% } else if (activeWord.solved) { %>
@@ -163,8 +162,9 @@
 <% if (game.status === 'active') { %>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  var GAME_ID   = '<%= game.id %>';
-  var MY_UID    = <%= user.id %>;
+  var GAME_ID        = '<%= game.id %>';
+  var MY_UID         = <%= user.id %>;
+  var ACTIVE_WORD_ID = <%= activeWord ? activeWord.id : 'null' %>;
   <%
     var PALETTE = ['#ef4444','#3b82f6','#22c55e','#f59e0b','#a855f7','#ec4899'];
   %>
@@ -178,14 +178,13 @@ document.addEventListener('DOMContentLoaded', function() {
       '<%= p.user_id %>': '<%= p.display_name.replace(/'/g, "\\'").replace(/</g,'&lt;') %>',
     <% }); %>
   };
+  // Ordered list of other player UIDs (determines which board row each gets)
+  var OTHER_PLAYERS = [<% players.forEach(function(p) { if (p.user_id != user.id) { %>'<%= p.user_id %>',<% } }); %>];
 
   // ── GAME STATE UPDATES ──────────────────────────────────────
   var aqLayout = document.getElementById('quote-layout');
   window.wsJoin('animequotes', GAME_ID, function(data) {
-    if (data.type === 'aq-typing') {
-      handleTyping(data);
-      return;
-    }
+    if (data.type === 'aq-typing') { handleTyping(data); return; }
     if (data.type === 'aq-clear') {
       if (String(data.targetUserId) === String(MY_UID)) {
         var inp = document.getElementById('aq-guess-input');
@@ -193,7 +192,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       return;
     }
-    // Game state update
     if (!data.words) return;
     if (data.status === 'completed') { window.location.reload(); return; }
     if (!aqLayout) return;
@@ -201,61 +199,42 @@ document.addEventListener('DOMContentLoaded', function() {
       var btn = aqLayout.querySelector('[data-word-id="' + w.id + '"]');
       if (!btn) return;
       if (w.solved && !btn.classList.contains('aq-word--solved')) {
-        btn.className = 'aq-word aq-word--solved';
-        btn.textContent = w.word;
+        btn.className = 'aq-word aq-word--solved'; btn.textContent = w.word;
       } else if (w.revealed && !btn.classList.contains('aq-word--revealed')) {
-        btn.className = 'aq-word aq-word--revealed';
-        btn.textContent = w.word;
+        btn.className = 'aq-word aq-word--revealed'; btn.textContent = w.word;
       }
     });
     var totalGuessable = data.words.filter(function(w) { return !w.is_given; }).length;
     var totalSolved    = data.words.filter(function(w) { return w.solved; }).length;
     var fill  = document.querySelector('.aq-progress-fill');
-    var label = document.querySelector('.aq-progress .text-sm');
-    if (fill)  fill.style.width = (totalGuessable > 0 ? Math.round(totalSolved / totalGuessable * 100) : 0) + '%';
-    if (label) label.textContent = totalSolved + '/' + totalGuessable + ' words solved';
+    var lbl   = document.querySelector('.aq-progress .text-sm');
+    if (fill) fill.style.width = (totalGuessable > 0 ? Math.round(totalSolved / totalGuessable * 100) : 0) + '%';
+    if (lbl)  lbl.textContent  = totalSolved + '/' + totalGuessable + ' words solved';
   });
 
   // ── TYPING BROADCAST ────────────────────────────────────────
-  var ACTIVE_WORD_ID = <%= activeWord ? activeWord.id : 'null' %>;
-
   function broadcastTyping(value) {
     if (!ACTIVE_WORD_ID || !window.wsRelay) return;
-    window.wsRelay({
-      type: 'aq-typing',
-      userId: MY_UID,
-      wordId: ACTIVE_WORD_ID,
-      input: value,
-    });
+    window.wsRelay({ type: 'aq-typing', userId: MY_UID, wordId: ACTIVE_WORD_ID, input: value });
   }
 
-  // Hook into both virtual keyboard clicks and physical key presses
   var kb = document.getElementById('game-keyboard');
   if (kb) kb.addEventListener('click', function() {
-    setTimeout(function() {
-      var v = document.getElementById('aq-guess-input');
-      if (v) broadcastTyping(v.value);
-    }, 10);
+    setTimeout(function() { var v = document.getElementById('aq-guess-input'); if (v) broadcastTyping(v.value); }, 10);
   });
   document.addEventListener('keydown', function() {
-    setTimeout(function() {
-      var v = document.getElementById('aq-guess-input');
-      if (v && document.activeElement !== v) broadcastTyping(v.value);
-    }, 10);
+    setTimeout(function() { var v = document.getElementById('aq-guess-input'); if (v) broadcastTyping(v.value); }, 10);
   });
-
-  // Broadcast empty when a guess is submitted (clears your bubble for others)
   var aqForm = document.getElementById('aq-guess-form');
   if (aqForm) aqForm.addEventListener('submit', function() { broadcastTyping(''); });
 
-  // ── TYPING INDICATORS ───────────────────────────────────────
+  // ── TYPING IN BOARD TILES ───────────────────────────────────
   var typingMap = {}; // uid -> { input, timer }
-  var wrap = document.getElementById('aq-typing-wrap');
 
   function handleTyping(data) {
     var uid = String(data.userId);
-    if (uid === String(MY_UID)) return; // ignore own echoes
-    if (String(data.wordId) !== String(ACTIVE_WORD_ID)) return; // different word
+    if (uid === String(MY_UID)) return;
+    if (String(data.wordId) !== String(ACTIVE_WORD_ID)) return;
 
     if (typingMap[uid] && typingMap[uid].timer) clearTimeout(typingMap[uid].timer);
 
@@ -264,38 +243,53 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       typingMap[uid] = {
         input: data.input.toUpperCase(),
-        timer: setTimeout(function() { delete typingMap[uid]; renderIndicators(); }, 4000),
+        timer: setTimeout(function() { delete typingMap[uid]; updatePreviewRows(); }, 4000),
       };
     }
-    renderIndicators();
+    updatePreviewRows();
   }
 
-  function renderIndicators() {
-    if (!wrap) return;
-    var uids = Object.keys(typingMap);
-    if (!uids.length) { wrap.innerHTML = ''; return; }
-    wrap.innerHTML = uids.map(function(uid) {
-      var color = COLORS[uid] || '#888';
-      var name  = NAMES[uid]  || 'Player';
-      var text  = typingMap[uid].input;
-      return '<div class="aq-typing-bubble" style="border-color:' + color + ';color:' + color + '">' +
-        '<span class="aq-typing-name">' + name + '</span>' +
-        '<span class="aq-typing-input">' + escHtml(text) + '</span>' +
-        '<button class="aq-typing-clear" data-uid="' + uid + '" title="Clear">×</button>' +
-      '</div>';
-    }).join('');
-    wrap.querySelectorAll('.aq-typing-clear').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var uid = btn.getAttribute('data-uid');
-        if (window.wsRelay) window.wsRelay({ type: 'aq-clear', targetUserId: uid });
-        delete typingMap[uid];
-        renderIndicators();
-      });
+  function updatePreviewRows() {
+    var board = document.getElementById('aq-board');
+    if (!board) return;
+    // All empty rows: [0] = local player's active row (keyboard manages it), [1+] = other players
+    var emptyRows = board.querySelectorAll('.row:not([data-filled])');
+
+    // Clear all preview rows
+    for (var i = 1; i < emptyRows.length; i++) clearPreviewRow(emptyRows[i]);
+
+    // Fill in each typing player's row by their position in OTHER_PLAYERS
+    OTHER_PLAYERS.forEach(function(uid, idx) {
+      if (!typingMap[uid]) return;
+      var row = emptyRows[idx + 1];
+      if (!row) return;
+      setPreviewRow(row, typingMap[uid].input, COLORS[uid] || '#888', NAMES[uid] || 'Player');
     });
   }
 
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  function clearPreviewRow(row) {
+    row.removeAttribute('data-preview');
+    row.style.removeProperty('--preview-color');
+    row.querySelectorAll('.tile').forEach(function(tile) {
+      tile.className = 'tile tile-empty';
+      tile.textContent = '';
+    });
+  }
+
+  function setPreviewRow(row, text, color, name) {
+    row.setAttribute('data-preview', name);
+    row.style.setProperty('--preview-color', color);
+    var tiles = row.querySelectorAll('.tile');
+    var letters = text.split('');
+    tiles.forEach(function(tile, i) {
+      if (letters[i]) {
+        tile.className = 'tile tile-preview';
+        tile.textContent = letters[i];
+      } else {
+        tile.className = 'tile tile-empty';
+        tile.textContent = '';
+      }
+    });
   }
 });
 </script>

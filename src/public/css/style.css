@@ -486,6 +486,22 @@ code {
   display: flex;
   gap: var(--tg, 6px);
   animation: rowIn 0.3s ease both;
+  position: relative;
+}
+
+.row[data-preview]::after {
+  content: attr(data-preview);
+  position: absolute;
+  left: calc(100% + 0.6rem);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--preview-color, #888);
+  white-space: nowrap;
+  pointer-events: none;
 }
 .row:nth-child(1) { animation-delay: 0.00s; }
 .row:nth-child(2) { animation-delay: 0.06s; }
@@ -511,6 +527,13 @@ code {
 }
 
 .tile-empty { background: transparent; border-color: var(--border); }
+
+.tile-preview {
+  background: transparent;
+  border-color: var(--preview-color, #888);
+  border-style: dashed;
+  color: var(--preview-color, #888);
+}
 
 .tile-green {
   background: var(--green);
@@ -972,52 +995,6 @@ code {
   margin-bottom: 1.5rem;
 }
 
-.aq-typing-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  min-height: 1rem;
-  margin: 0.75rem 0 0.5rem;
-}
-
-.aq-typing-bubble {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.5rem 0.25rem 0.65rem;
-  border: 2px solid;
-  border-radius: 4px;
-  background: transparent;
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  letter-spacing: 0.06em;
-}
-
-.aq-typing-name {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  opacity: 0.75;
-}
-
-.aq-typing-input {
-  font-weight: 700;
-  min-width: 2ch;
-}
-
-.aq-typing-clear {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
-  padding: 0;
-  opacity: 0.5;
-  color: inherit;
-  transition: opacity 0.15s;
-}
-
-.aq-typing-clear:hover { opacity: 1; }
 
 .aq-full-quote {
   font-style: italic;
