@@ -2,7 +2,7 @@ const express = require('express');
 const { getDb } = require('../db/database');
 const { ensureAuth } = require('../services/authService');
 const { POKEMON_GEN1 } = require('../data/pokemon_gen1');
-const { publish, subscribe } = require('../services/gameEvents');
+const { broadcast } = require('../ws/wsServer');
 
 // Sorted by name length ascending so more players = longer (harder) name
 const POKEMON_BY_LENGTH = [...POKEMON_GEN1].filter(p => p.length >= 5).sort((a, b) => a.length - b.length || a.localeCompare(b));
@@ -300,22 +300,6 @@ function pokemonGameState(db, gameId) {
   return { status: game.status, maxGuesses: game.max_guesses, players, guesses };
 }
 
-// GET /games/pokemon/:id/events — SSE real-time updates
-router.get('/games/pokemon/:id/events', ensureAuth, (req, res) => {
-  const db = getDb();
-  const gameId = parseInt(req.params.id);
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
-  const state = pokemonGameState(db, gameId);
-  if (state) send(state);
-
-  const unsub = subscribe('pokemon:' + gameId, (data) => send(data));
-  req.on('close', unsub);
-});
 
 // POST /games/pokemon/:id/guess
 router.post('/games/pokemon/:id/guess', ensureAuth, (req, res) => {
@@ -351,7 +335,7 @@ router.post('/games/pokemon/:id/guess', ensureAuth, (req, res) => {
   }
 
   const state = pokemonGameState(db, game.id);
-  if (state) publish('pokemon:' + game.id, state);
+  if (state) broadcast('pokemon', game.id, state);
 
   const outOfGuesses = !solved && newCount >= game.max_guesses;
   res.json({

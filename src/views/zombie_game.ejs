@@ -8,8 +8,6 @@
     <p class="puzzle-date">Game #<%= game.id %> &nbsp;·&nbsp; Co-op Survival</p>
     <section class="dash-section">
       <h2>Assemble your squad</h2>
-      <p class="text-sm" style="margin-bottom:1rem">Share this game ID with friends:</p>
-      <div class="game-code"><%= game.id %></div>
 
       <div class="member-list" style="margin:1.5rem 0">
         <% players.forEach(function(p) { %>
@@ -306,18 +304,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // SSE – co-op real-time (see other players' guesses instantly)
+  // WebSocket – co-op real-time (see other players' guesses instantly)
   var hordeGrid = document.getElementById('zombie-horde-grid');
   if (hordeGrid && hordeGrid.getAttribute('data-status') === 'active') {
-    var evtSource = new EventSource('/games/zombie/' + GAME_ID + '/events');
-    evtSource.onmessage = function(e) {
+    window.wsJoin('zombie', GAME_ID, function(data) {
       if (submitting) return;
-      var data = JSON.parse(e.data);
-      if (!data) return;
-      if (data.status === 'completed') { evtSource.close(); window.location.reload(); return; }
-      if (data.currentRound && data.currentRound !== CURRENT_ROUND) { evtSource.close(); window.location.reload(); return; }
+      if (data.status === 'completed') { window.location.reload(); return; }
+      if (data.currentRound && data.currentRound !== CURRENT_ROUND) { window.location.reload(); return; }
       if (!data.guesses || !data.round) return;
-      var localCount = (document.querySelector('#zombie-board-0 .row[data-filled]') ? document.querySelectorAll('#zombie-board-0 .row[data-filled]').length : 0);
+      var localCount = document.querySelectorAll('#zombie-board-0 .row[data-filled]').length;
       if (data.guesses.length > localCount) {
         for (var i = localCount; i < data.guesses.length; i++) {
           animateGuess(data.guesses[i].results, false);
@@ -327,8 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
         markSolvedBoards(data.round.solvedMask);
         if (window.updateKeyboardColors) window.updateKeyboardColors();
       }
-    };
-    window.addEventListener('beforeunload', function() { evtSource.close(); });
+    });
   }
 });
 </script>

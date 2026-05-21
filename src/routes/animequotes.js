@@ -3,7 +3,7 @@ const { getDb } = require('../db/database');
 const { ensureAuth } = require('../services/authService');
 const { generateAnimeQuote } = require('../services/geminiService');
 const { isValidWord } = require('../services/wordService');
-const { publish, subscribe } = require('../services/gameEvents');
+const { broadcast } = require('../ws/wsServer');
 
 const router = express.Router();
 const MAX_GUESSES = 6;
@@ -152,10 +152,11 @@ router.post('/games/animequotes/:id/start', ensureAuth, async (req, res) => {
   const wordTarget = targetWordCount(playerCount);
 
   try {
-    const quote = await generateAnimeQuote(game.anime_name, wordTarget);
+    const { quote, character, episode, timestamp } = await generateAnimeQuote(game.anime_name, wordTarget);
     const words = processQuote(quote);
 
-    db.prepare('UPDATE animequote_games SET quote_raw = ?, status = ? WHERE id = ?').run(quote, 'active', game.id);
+    db.prepare('UPDATE animequote_games SET quote_raw = ?, status = ?, character_name = ?, episode = ?, quote_timestamp = ? WHERE id = ?')
+      .run(quote, 'active', character, episode, timestamp, game.id);
 
     const insert = db.prepare('INSERT INTO animequote_words (game_id, word_index, word, word_length, is_given) VALUES (?, ?, ?, ?, ?)');
     for (const w of words) insert.run(game.id, w.word_index, w.word, w.word_length, w.is_given);
@@ -205,7 +206,7 @@ router.post('/games/animequotes/:id/guess', ensureAuth, async (req, res) => {
   }
 
   checkGameComplete(db, game.id);
-  publish('animequotes:' + game.id, animequoteGameState(db, game.id));
+  broadcast('animequotes', game.id, animequoteGameState(db, game.id));
   res.json({ ok: true });
 });
 
@@ -220,22 +221,6 @@ function animequoteGameState(db, gameId) {
   return { status: game.status, words, players };
 }
 
-// GET /games/animequotes/:id/events — SSE real-time updates
-router.get('/games/animequotes/:id/events', ensureAuth, (req, res) => {
-  const db = getDb();
-  const gameId = parseInt(req.params.id);
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
-  const state = animequoteGameState(db, gameId);
-  if (state) send(state);
-
-  const unsub = subscribe('animequotes:' + gameId, (data) => send(data));
-  req.on('close', unsub);
-});
 
 router.post('/games/animequotes/:id/cancel', ensureAuth, (req, res) => {
   const db = getDb();

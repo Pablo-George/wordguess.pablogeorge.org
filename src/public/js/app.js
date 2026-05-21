@@ -1,3 +1,58 @@
+// ── WEBSOCKET CLIENT ─────────────────────────────────────────────────────────
+(function() {
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  var ws = null;
+  var handlers = {}; // room key -> handler fn
+  var pending = []; // join messages queued before open
+  var reconnectDelay = 1000;
+
+  function connect() {
+    ws = new WebSocket(proto + '//' + location.host);
+
+    ws.onopen = function() {
+      reconnectDelay = 1000;
+      pending.forEach(function(msg) { ws.send(msg); });
+      pending = [];
+    };
+
+    ws.onmessage = function(e) {
+      try {
+        var data = JSON.parse(e.data);
+        if (data._room && handlers[data._room]) handlers[data._room](data);
+      } catch (err) {}
+    };
+
+    ws.onclose = function() {
+      // Reconnect with backoff (cap at 30s)
+      setTimeout(connect, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+    };
+
+    ws.onerror = function() { ws.close(); };
+  }
+
+  connect();
+
+  window.wsJoin = function(gameType, gameId, handler) {
+    var key = gameType + ':' + gameId;
+    handlers[key] = handler;
+    var msg = JSON.stringify({ type: 'join', gameType: gameType, gameId: gameId });
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(msg);
+    } else {
+      pending.push(msg);
+    }
+  };
+
+  window.wsRelay = function(data) {
+    var msg = JSON.stringify({ type: 'relay', data: data });
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(msg);
+    }
+  };
+})();
+
+// ── GAME UI ───────────────────────────────────────────────────────────────────
 (function() {
   // Prevent pinch zoom (Safari ignores the viewport meta tag since iOS 10)
   document.addEventListener('touchmove', function(e) {
@@ -316,20 +371,17 @@
 
   }
 
-  // Pokemon real-time updates via SSE (only when game is active — avoids reload loop on completed page)
+  // Pokemon real-time updates via WebSocket
   var pokemonBoard = document.getElementById('pokemon-board');
   if (pokemonBoard && pokemonBoard.getAttribute('data-status') === 'active') {
     var pokemonGameId = (pokemonForm && pokemonForm.getAttribute('data-game-id'))
       || (window.location.pathname.match(/\/games\/pokemon\/(\d+)/) || [])[1];
     if (pokemonGameId) {
-      var pokemonEvt = new EventSource('/games/pokemon/' + pokemonGameId + '/events');
-      pokemonEvt.onmessage = function(e) {
-        var data = JSON.parse(e.data);
-        if (data.status === 'completed') { pokemonEvt.close(); window.location.reload(); return; }
+      window.wsJoin('pokemon', pokemonGameId, function(data) {
+        if (data.status === 'completed') { window.location.reload(); return; }
         updatePokemonPlayers(data);
         updatePokemonGuesses(data);
-      };
-      window.addEventListener('beforeunload', function() { pokemonEvt.close(); });
+      });
     }
   }
 
@@ -540,10 +592,8 @@
     var koGameId = document.getElementById('knockout-guess-form') && document.getElementById('knockout-guess-form').getAttribute('data-game-id');
     if (!koGameId) koGameId = (window.location.pathname.match(/\/games\/knockout\/(\d+)/) || [])[1];
     if (koGameId) {
-      var koEvt = new EventSource('/games/knockout/' + koGameId + '/events');
-      koEvt.onmessage = function(e) {
-        var data = JSON.parse(e.data);
-        if (data.status === 'completed') { koEvt.close(); window.location.reload(); return; }
+      window.wsJoin('knockout', koGameId, function(data) {
+        if (data.status === 'completed') { window.location.reload(); return; }
         var list = document.querySelector('.player-status-list');
         if (!list || !data.players) return;
         data.players.forEach(function(p) {
@@ -558,43 +608,10 @@
             if (scoreEl) scoreEl.textContent = p.total_score + ' pts';
           }
         });
-      };
-      window.addEventListener('beforeunload', function() { koEvt.close(); });
+      });
     }
   }
 
-  // ── ANIMEQUOTES REAL-TIME ─────────────────────────────────────
-  var aqLayout = document.getElementById('quote-layout');
-  if (aqLayout && aqLayout.getAttribute('data-status') === 'active') {
-    var aqGameId = (window.location.pathname.match(/\/games\/animequotes\/(\d+)/) || [])[1];
-    if (aqGameId) {
-      var aqEvt = new EventSource('/games/animequotes/' + aqGameId + '/events');
-      aqEvt.onmessage = function(e) {
-        var data = JSON.parse(e.data);
-        if (!data.words) return;
-        if (data.status === 'completed') { aqEvt.close(); window.location.reload(); return; }
-        data.words.forEach(function(w) {
-          var btn = aqLayout.querySelector('[data-word-id="' + w.id + '"]');
-          if (!btn) return;
-          if (w.solved && !btn.classList.contains('aq-word--solved')) {
-            btn.className = 'aq-word aq-word--solved';
-            btn.textContent = w.word;
-          } else if (w.revealed && !btn.classList.contains('aq-word--revealed')) {
-            btn.className = 'aq-word aq-word--revealed';
-            btn.textContent = w.word;
-          }
-        });
-        // Update progress bar
-        var totalGuessable = data.words.filter(function(w) { return !w.is_given; }).length;
-        var totalSolved = data.words.filter(function(w) { return w.solved; }).length;
-        var fill = document.querySelector('.aq-progress-fill');
-        var label = document.querySelector('.aq-progress .text-sm');
-        if (fill) fill.style.width = (totalGuessable > 0 ? Math.round(totalSolved / totalGuessable * 100) : 0) + '%';
-        if (label) label.textContent = totalSolved + '/' + totalGuessable + ' words solved';
-      };
-      window.addEventListener('beforeunload', function() { aqEvt.close(); });
-    }
-  }
 
   // ── ON-SCREEN KEYBOARD ────────────────────────────────────────
   (function() {

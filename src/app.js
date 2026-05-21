@@ -6,6 +6,7 @@ const { getDb } = require('./db/database');
 const { migrate } = require('./db/migrate');
 const { seed } = require('./db/seed');
 const { loadUser } = require('./services/authService');
+const { setupWebSocket } = require('./ws/wsServer');
 
 const app = express();
 
@@ -26,12 +27,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
 // Session
-app.use(session({
+const sessionMiddleware = session({
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 },
-}));
+});
+app.use(sessionMiddleware);
 
 // Passport
 app.use(passport.initialize());
@@ -158,10 +160,11 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something went wrong');
 });
 
-app.listen(PORT, () => {
+const httpServer = app.listen(PORT, () => {
   console.log(`WordGuess running on ${BASE_URL}`);
   console.log('Env check — GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'SET ✓' : 'NOT SET ✗');
   console.log('Env check — GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'SET ✓' : 'NOT SET ✗');
 });
+setupWebSocket(httpServer, sessionMiddleware);
 
 module.exports = app;

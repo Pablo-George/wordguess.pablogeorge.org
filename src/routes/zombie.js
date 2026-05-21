@@ -3,7 +3,7 @@ const { getDb } = require('../db/database');
 const { ensureAuth } = require('../services/authService');
 const { ANSWERS } = require('../data/answers');
 const { isValidWord } = require('../services/wordService');
-const { publish, subscribe } = require('../services/gameEvents');
+const { broadcast } = require('../ws/wsServer');
 
 const router = express.Router();
 
@@ -218,7 +218,7 @@ router.post('/games/zombie/:id/guess', ensureAuth, async (req, res) => {
     db.prepare('UPDATE zombie_rounds SET solved_mask = ? WHERE id = ?').run(JSON.stringify(newSolvedMask), round.id);
   }
 
-  publish('zombie:' + game.id, zombieGameState(db, game.id));
+  broadcast('zombie', game.id, zombieGameState(db, game.id));
 
   res.json({
     ok: true,
@@ -233,20 +233,6 @@ router.post('/games/zombie/:id/guess', ensureAuth, async (req, res) => {
   });
 });
 
-// GET /games/zombie/:id/events
-router.get('/games/zombie/:id/events', ensureAuth, (req, res) => {
-  const db = getDb();
-  const gameId = parseInt(req.params.id);
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-  const send = data => res.write(`data: ${JSON.stringify(data)}\n\n`);
-  const state = zombieGameState(db, gameId);
-  if (state) send(state);
-  const unsub = subscribe('zombie:' + gameId, data => send(data));
-  req.on('close', unsub);
-});
 
 // POST /games/zombie/:id/cancel
 router.post('/games/zombie/:id/cancel', ensureAuth, (req, res) => {
