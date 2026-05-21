@@ -261,8 +261,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!data.words) return;
     if (data.status === 'completed') { window.location.reload(); return; }
 
+    // Ignore board/reload updates triggered by our own guess — onAqGuessSuccess handles those
+    var fromMe = data.lastGuess && String(data.lastGuess.userId) === MY_UID;
+
     // Fill in the board row for a guess submitted by another player
-    if (data.lastGuess && String(data.lastGuess.wordId) === ACTIVE_WORD_ID) {
+    if (!fromMe && data.lastGuess && String(data.lastGuess.wordId) === ACTIVE_WORD_ID) {
       handleIncomingGuess(data.lastGuess);
     }
 
@@ -284,8 +287,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (lbl)  lbl.textContent  = totalSolved + '/' + totalGuessable + ' words solved';
     }
 
-    // Reload if the word we're currently viewing is now solved or revealed
-    if (ACTIVE_WORD_ID) {
+    // Reload if another player solved/revealed the word we're currently viewing
+    if (!fromMe && ACTIVE_WORD_ID) {
       var activeWordState = data.words.find(function(w) { return String(w.id) === ACTIVE_WORD_ID; });
       if (activeWordState && (activeWordState.solved || activeWordState.revealed)) {
         setTimeout(function() { window.location.reload(); }, 1200);
