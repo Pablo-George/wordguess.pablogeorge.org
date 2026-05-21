@@ -1322,6 +1322,7 @@ code {
   margin-bottom: 0.25rem;
 }
 .zombie-shop-subtitle { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 0.5rem; }
+.zombie-shop-coins-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .zombie-shop-earned {
   display: inline-block;
   background: rgba(168,239,64,0.15);
@@ -1330,9 +1331,66 @@ code {
   border-radius: 4px;
   padding: 0.2rem 0.6rem;
   font-size: 0.82rem;
-  margin-bottom: 0.5rem;
 }
 .zombie-shop-coins { font-size: 1.05rem; color: var(--text); }
+
+/* Ready section */
+.zombie-shop-ready-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.zombie-shop-ready-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.zombie-shop-ready-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem; }
+.zombie-shop-ready-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.zombie-shop-ready-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--border); flex-shrink: 0;
+  transition: background 0.2s;
+}
+.zombie-shop-ready-dot.ready { background: #a8ef40; }
+.zombie-shop-ready-status { margin-left: auto; font-size: 0.78rem; color: var(--text-dim); }
+.zombie-shop-waiting { font-size: 0.85rem; color: var(--text-dim); font-style: italic; }
+
+/* Wave kit banner */
+.zombie-wave-kit {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.75rem;
+  background: rgba(74,144,226,0.08);
+  border: 1px solid rgba(74,144,226,0.3);
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+}
+.zombie-wave-kit-label {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #4a90e2;
+  flex-shrink: 0;
+}
+.zombie-wave-kit-tag {
+  background: rgba(74,144,226,0.15);
+  color: #4a90e2;
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.78rem;
+}
+.zombie-wave-kit-safe {
+  background: rgba(245,166,35,0.15);
+  color: #f5a623;
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.78rem;
+}
 .zombie-shop-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));

@@ -143,14 +143,20 @@
 
       <%# ── SHOP ───────────────────────────────────────── %>
       <% } else if (game.status === 'shop') { %>
+        <%
+          var shopReadyIds = JSON.parse(game.shop_ready || '[]').map(String);
+          var iAmReady = shopReadyIds.includes(String(user.id));
+        %>
         <div class="zombie-shop">
           <div class="zombie-shop-header">
             <div class="zombie-shop-title">🛒 Supply Drop</div>
             <div class="zombie-shop-subtitle">Wave <%= game.current_round - 1 %> survived — prepare for Wave <%= game.current_round %></div>
-            <% if (shopEarned) { %>
-              <div class="zombie-shop-earned">+<%= shopEarned %> coins earned this wave</div>
-            <% } %>
-            <div class="zombie-shop-coins">💰 <strong><%= game.coins %></strong> coins</div>
+            <div class="zombie-shop-coins-row">
+              <% if (game.last_coins_earned > 0) { %>
+                <span class="zombie-shop-earned">+<%= game.last_coins_earned %> this wave</span>
+              <% } %>
+              <span class="zombie-shop-coins">💰 <strong><%= game.coins %></strong> coins</span>
+            </div>
           </div>
 
           <div class="zombie-shop-grid">
@@ -176,7 +182,7 @@
 
           <% if (shopItems.length > 0) { %>
             <div class="zombie-shop-cart">
-              <span class="zombie-shop-cart-label">Kit:</span>
+              <span class="zombie-shop-cart-label">Kit for Wave <%= game.current_round %>:</span>
               <% shopItems.forEach(function(item) { %>
                 <% var d = SHOP_ITEMS[item.type]; %>
                 <span class="zombie-shop-cart-tag"><%= d ? d.name : item.type %></span>
@@ -184,19 +190,50 @@
             </div>
           <% } %>
 
-          <form action="/games/zombie/<%= game.id %>/shop/continue" method="POST" style="margin-top:1.75rem">
-            <button type="submit" class="btn btn-primary" id="shop-continue-btn">
-              Continue to Wave <%= game.current_round %> →
-            </button>
-          </form>
-          <script>
-          document.querySelector('[action$="/shop/continue"]').addEventListener('submit', function() {
-            var btn = document.getElementById('shop-continue-btn');
-            btn.disabled = true;
-            btn.textContent = 'Picking themed words…';
-          });
-          </script>
+          <%# Ready status %>
+          <div class="zombie-shop-ready-section">
+            <div class="zombie-shop-ready-title">Squad Ready Status</div>
+            <div class="zombie-shop-ready-list">
+              <% players.forEach(function(p) { %>
+                <% var isReady = shopReadyIds.includes(String(p.user_id)); %>
+                <div class="zombie-shop-ready-row">
+                  <span class="zombie-shop-ready-dot <%= isReady ? 'ready' : '' %>"></span>
+                  <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+                  <span><%= p.display_name %></span>
+                  <span class="zombie-shop-ready-status"><%= isReady ? '✅ Ready' : '⏳ Shopping' %></span>
+                </div>
+              <% }) %>
+            </div>
+            <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-top:1rem">
+              <% if (!iAmReady) { %>
+                <form action="/games/zombie/<%= game.id %>/shop/ready" method="POST" style="margin:0" id="shop-ready-form">
+                  <button type="submit" class="btn btn-primary" id="shop-ready-btn">✅ Ready Up</button>
+                </form>
+              <% } else { %>
+                <span class="zombie-shop-waiting">Waiting for others...</span>
+              <% } %>
+              <% if (user.id === game.created_by) { %>
+                <form action="/games/zombie/<%= game.id %>/shop/force-start" method="POST" style="margin:0" id="shop-force-form">
+                  <button type="submit" class="btn btn-sm" id="shop-force-btn">Force Start</button>
+                </form>
+              <% } %>
+            </div>
+          </div>
         </div>
+        <script>
+        (function() {
+          var readyForm = document.getElementById('shop-ready-form');
+          if (readyForm) readyForm.addEventListener('submit', function() {
+            var btn = document.getElementById('shop-ready-btn');
+            btn.disabled = true; btn.textContent = 'Ready!';
+          });
+          var forceForm = document.getElementById('shop-force-form');
+          if (forceForm) forceForm.addEventListener('submit', function() {
+            var btn = document.getElementById('shop-force-btn');
+            btn.disabled = true; btn.textContent = 'Picking themed words…';
+          });
+        })();
+        </script>
 
       <%# ── ACTIVE / COMPLETED ─────────────────────────── %>
       <% } else if (round) { %>
@@ -219,8 +256,19 @@
           </div>
         <% } %>
 
-        <%# Safe guess indicator %>
-        <% if (round.safe_guesses > 0 && game.status === 'active') { %>
+        <%# Wave kit (applied items) %>
+        <% if (appliedItems && appliedItems.length > 0) { %>
+          <div class="zombie-wave-kit">
+            <span class="zombie-wave-kit-label">🎒 Wave Kit</span>
+            <% appliedItems.forEach(function(item) { %>
+              <% var d = SHOP_ITEMS[item.type]; %>
+              <span class="zombie-wave-kit-tag"><%= d ? d.name : item.type %></span>
+            <% }) %>
+            <% if (round.safe_guesses > 0) { %>
+              <span class="zombie-wave-kit-safe">🛡️ Safe Guess ready</span>
+            <% } %>
+          </div>
+        <% } else if (round.safe_guesses > 0 && game.status === 'active') { %>
           <div class="zombie-safe-indicator">🛡️ Safe Guess ready</div>
         <% } %>
 
@@ -332,7 +380,7 @@
 (function() {
   if (window.wsJoin) {
     window.wsJoin('zombie', '<%= game.id %>', function(data) {
-      if (data.status === 'active') window.location.reload();
+      window.location.reload();
     });
   }
 })();
