@@ -61,7 +61,7 @@ async function generateZombieTheme(wordCount, wordLength = 5, retries = 3) {
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const prompt = `You are creating content for a collaborative Wordle-style word guessing game.
 Players must guess ${wordCount} mystery ${wordLength}-letter word${wordCount > 1 ? 's' : ''} that ${wordCount > 1 ? 'all share' : 'belongs to'} a theme.

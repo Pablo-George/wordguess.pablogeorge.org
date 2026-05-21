@@ -149,7 +149,6 @@ async function preGenerateRound(db, gameId, nextRound) {
 }
 
 async function startRound(db, gameId, roundNumber, themeEnabled = true, guessScale = 'normal') {
-  console.log(`[zombie] startRound game=${gameId} round=${roundNumber} themeEnabled=${themeEnabled}`);
   const game = db.prepare('SELECT * FROM zombie_games WHERE id = ?').get(gameId);
   const passiveItems = JSON.parse(game.passive_items || '[]');
   const wordLen = wordLengthForRound(roundNumber, game.word_escalation);
@@ -173,22 +172,18 @@ async function startRound(db, gameId, roundNumber, themeEnabled = true, guessSca
   // Clear pending regardless — we either used it or it was stale
   db.prepare('UPDATE zombie_games SET pending_round = NULL WHERE id = ?').run(gameId);
 
-  if (words) {
-    console.log(`[zombie] startRound using pre-gen: theme="${theme}" words=${JSON.stringify(words)}`);
-  } else {
+  if (!words) {
     // Pre-gen wasn't ready (round 1, or finished too fast) — generate synchronously
     if (themeEnabled) {
       try {
         const generated = await generateZombieTheme(wordCount, wordLen);
         words = generated.words;
         theme = generated.theme;
-        console.log(`[zombie] startRound Gemini OK: theme="${theme}" words=${JSON.stringify(words)}`);
       } catch (err) {
         console.warn('[zombie] theme gen failed, using local pool:', err.message);
         words = pickWords(db, gameId, wordCount, wordLen);
       }
     } else {
-      console.log(`[zombie] startRound theme disabled, using local pool`);
       words = pickWords(db, gameId, wordCount, wordLen);
     }
   }
