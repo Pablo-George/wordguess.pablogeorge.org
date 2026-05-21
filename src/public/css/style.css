@@ -1176,7 +1176,17 @@ code {
 }
 .zombie-main { min-width: 0; }
 
-/* Lobby setting row with toggle */
+/* Lobby settings panel */
+.zombie-lobby-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 0.25rem;
+}
 .zombie-lobby-setting {
   display: flex;
   align-items: center;
@@ -1184,6 +1194,25 @@ code {
 }
 .zombie-lobby-setting-label { font-weight: 600; font-size: 0.9rem; }
 .zombie-lobby-setting-desc { font-size: 0.78rem; color: var(--text-dim); margin-top: 0.1rem; }
+
+/* Guess scale segmented picker */
+.zombie-scale-picker { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.zombie-scale-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-dim);
+  transition: border-color 0.15s, color 0.15s;
+}
+.zombie-scale-btn:hover { border-color: var(--text-mid); color: var(--text); }
+.zombie-scale-active { border-color: #a8ef40 !important; color: #a8ef40 !important; background: rgba(168,239,64,0.08); }
+.zombie-scale-name { font-weight: 600; font-size: 0.82rem; }
+.zombie-scale-hint { font-size: 0.65rem; margin-top: 0.1rem; opacity: 0.7; font-family: var(--font-mono, monospace); }
 
 /* Toggle switch */
 .zombie-toggle {

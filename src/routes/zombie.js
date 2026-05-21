@@ -49,8 +49,12 @@ function computeFeedback(guess, answer) {
   return result;
 }
 
-// Round N: guesses scale at 1.5× per zombie, rounded
-function maxGuessesForRound(n) { return Math.round(4 + n * 1.5); }
+// Round N: guesses scale based on host-selected scale
+function maxGuessesForRound(n, scale = 'normal') {
+  if (scale === 'tight')    return 4 + n;
+  if (scale === 'generous') return Math.round(5 + n * 2);
+  return Math.round(4 + n * 1.5); // normal
+}
 
 function pickWords(db, gameId, count) {
   const used = new Set(
@@ -68,7 +72,7 @@ function pickWords(db, gameId, count) {
   return out;
 }
 
-async function startRound(db, gameId, roundNumber, items = [], themeEnabled = true) {
+async function startRound(db, gameId, roundNumber, items = [], themeEnabled = true, guessScale = 'normal') {
   const extraGuesses = items.filter(i => i.type === 'extra_guess').length
     + items.filter(i => i.type === 'guess_burst').length * 3;
   const shieldCount = items.filter(i => i.type === 'shield').length
@@ -90,7 +94,7 @@ async function startRound(db, gameId, roundNumber, items = [], themeEnabled = tr
     words = pickWords(db, gameId, wordCount);
   }
 
-  const maxGuesses = maxGuessesForRound(roundNumber) + extraGuesses;
+  const maxGuesses = maxGuessesForRound(roundNumber, guessScale) + extraGuesses;
   const safeGuesses = items.filter(i => i.type === 'safe_guess').length;
 
   // Build hint tiles from items
@@ -281,7 +285,7 @@ router.post('/games/zombie/:id/start', ensureAuth, async (req, res) => {
   if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
     return res.redirect('/games/zombie/' + req.params.id);
   }
-  await startRound(db, game.id, 1, [], game.theme_enabled !== 0);
+  await startRound(db, game.id, 1, [], game.theme_enabled !== 0, game.guess_scale || 'normal');
   db.prepare("UPDATE zombie_games SET status = 'active' WHERE id = ?").run(game.id);
   broadcast('lobby', 'zombie:' + game.id, { status: 'active' });
   broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
@@ -347,13 +351,13 @@ router.post('/games/zombie/:id/guess', ensureAuth, async (req, res) => {
     const next = game.current_round + 1;
     const coinsEarned = 10 + Math.max(0, (effectiveMaxGuesses - newGuessCount) * 8);
 
-    if (game.current_round % 2 === 0) {
+    if (game.current_round % 2 === 0 && game.shop_enabled !== 0) {
       // Shop time — pick 3 random items to offer
       const shopSelections = shuffleArray(Object.keys(SHOP_ITEMS)).slice(0, 3);
       db.prepare("UPDATE zombie_games SET status = 'shop', current_round = ?, rounds_survived = rounds_survived + 1, coins = coins + ?, shop_selections = ? WHERE id = ?")
         .run(next, coinsEarned, JSON.stringify(shopSelections), game.id);
     } else {
-      await startRound(db, game.id, next, [], game.theme_enabled !== 0);
+      await startRound(db, game.id, next, [], game.theme_enabled !== 0, game.guess_scale || 'normal');
       db.prepare("UPDATE zombie_games SET current_round = ?, rounds_survived = rounds_survived + 1, coins = coins + ? WHERE id = ?")
         .run(next, coinsEarned, game.id);
     }
@@ -413,10 +417,36 @@ router.post('/games/zombie/:id/shop/continue', ensureAuth, async (req, res) => {
   if (!myPlayer) return res.redirect('/games/zombie/' + req.params.id);
 
   const items = JSON.parse(game.shop_items || '[]');
-  await startRound(db, game.id, game.current_round, items, game.theme_enabled !== 0);
+  await startRound(db, game.id, game.current_round, items, game.theme_enabled !== 0, game.guess_scale || 'normal');
   db.prepare("UPDATE zombie_games SET status = 'active', shop_items = '[]', shop_selections = '[]' WHERE id = ?").run(game.id);
   broadcast('zombie', game.id, zombieGameState(db, game.id));
   res.redirect('/games/zombie/' + game.id);
+});
+
+// POST /games/zombie/:id/toggle-shop
+router.post('/games/zombie/:id/toggle-shop', ensureAuth, (req, res) => {
+  const db = getDb();
+  const game = db.prepare('SELECT * FROM zombie_games WHERE id = ?').get(req.params.id);
+  if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
+    return res.redirect('/games/zombie/' + req.params.id);
+  }
+  const newVal = game.shop_enabled === 0 ? 1 : 0;
+  db.prepare('UPDATE zombie_games SET shop_enabled = ? WHERE id = ?').run(newVal, game.id);
+  broadcast('lobby', 'zombie:' + game.id, { shop_enabled: newVal });
+  res.redirect('/games/zombie/' + req.params.id);
+});
+
+// POST /games/zombie/:id/set-guess-scale
+router.post('/games/zombie/:id/set-guess-scale', ensureAuth, (req, res) => {
+  const db = getDb();
+  const game = db.prepare('SELECT * FROM zombie_games WHERE id = ?').get(req.params.id);
+  if (!game || game.status !== 'waiting' || game.created_by !== req.user.id) {
+    return res.redirect('/games/zombie/' + req.params.id);
+  }
+  const scale = ['tight', 'normal', 'generous'].includes(req.body.scale) ? req.body.scale : 'normal';
+  db.prepare('UPDATE zombie_games SET guess_scale = ? WHERE id = ?').run(scale, game.id);
+  broadcast('lobby', 'zombie:' + game.id, { guess_scale: scale });
+  res.redirect('/games/zombie/' + req.params.id);
 });
 
 // POST /games/zombie/:id/toggle-theme

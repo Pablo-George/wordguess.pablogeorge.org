@@ -49,26 +49,54 @@
               Round 1 starts with 1 zombie. Each wave you clear adds another.
             </p>
 
-            <%# Theme toggle %>
-            <div class="zombie-lobby-setting">
-              <form action="/games/zombie/<%= game.id %>/toggle-theme" method="POST" style="margin:0">
-                <button type="submit" class="zombie-toggle<%= game.theme_enabled !== 0 ? ' zombie-toggle-on' : '' %>">
-                  <span class="zombie-toggle-knob"></span>
-                </button>
-              </form>
-              <div>
-                <div class="zombie-lobby-setting-label">Connections Mode</div>
-                <div class="zombie-lobby-setting-desc">
-                  <% if (game.theme_enabled !== 0) { %>
-                    AI picks a theme — all zombie words are related
-                  <% } else { %>
-                    Random words each round
-                  <% } %>
+            <div class="zombie-lobby-options">
+              <%# Theme toggle %>
+              <div class="zombie-lobby-setting">
+                <form action="/games/zombie/<%= game.id %>/toggle-theme" method="POST" style="margin:0">
+                  <button type="submit" class="zombie-toggle<%= game.theme_enabled !== 0 ? ' zombie-toggle-on' : '' %>">
+                    <span class="zombie-toggle-knob"></span>
+                  </button>
+                </form>
+                <div>
+                  <div class="zombie-lobby-setting-label">Connections Mode</div>
+                  <div class="zombie-lobby-setting-desc"><%= game.theme_enabled !== 0 ? 'AI picks a theme — all zombie words are related' : 'Random words each round' %></div>
+                </div>
+              </div>
+
+              <%# Shop toggle %>
+              <div class="zombie-lobby-setting">
+                <form action="/games/zombie/<%= game.id %>/toggle-shop" method="POST" style="margin:0">
+                  <button type="submit" class="zombie-toggle<%= game.shop_enabled !== 0 ? ' zombie-toggle-on' : '' %>">
+                    <span class="zombie-toggle-knob"></span>
+                  </button>
+                </form>
+                <div>
+                  <div class="zombie-lobby-setting-label">Supply Drop Shop</div>
+                  <div class="zombie-lobby-setting-desc"><%= game.shop_enabled !== 0 ? 'Shop opens every 2 waves' : 'No shop' %></div>
+                </div>
+              </div>
+
+              <%# Guess scale %>
+              <div class="zombie-lobby-setting" style="align-items:flex-start">
+                <div style="width:42px;flex-shrink:0"></div>
+                <div>
+                  <div class="zombie-lobby-setting-label" style="margin-bottom:0.4rem">Guesses per Wave</div>
+                  <div class="zombie-scale-picker">
+                    <% [['tight','Tight','R1:5 R2:6 R3:7'],['normal','Standard','R1:6 R2:7 R3:9'],['generous','Generous','R1:7 R2:9 R3:11']].forEach(function(opt) { %>
+                      <form action="/games/zombie/<%= game.id %>/set-guess-scale" method="POST" style="margin:0">
+                        <input type="hidden" name="scale" value="<%= opt[0] %>">
+                        <button type="submit" class="zombie-scale-btn<%= (game.guess_scale || 'normal') === opt[0] ? ' zombie-scale-active' : '' %>">
+                          <span class="zombie-scale-name"><%= opt[1] %></span>
+                          <span class="zombie-scale-hint"><%= opt[2] %></span>
+                        </button>
+                      </form>
+                    <% }) %>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1rem">
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1.25rem">
               <form action="/games/zombie/<%= game.id %>/start" method="POST" id="zombie-start-form">
                 <button type="submit" class="btn btn-primary" id="zombie-start-btn">Start Game</button>
               </form>
@@ -84,14 +112,25 @@
             });
             </script>
           <% } else { %>
-            <div class="zombie-lobby-setting" style="margin-bottom:1rem">
-              <div class="zombie-toggle<%= game.theme_enabled !== 0 ? ' zombie-toggle-on' : '' %>" style="pointer-events:none">
-                <span class="zombie-toggle-knob"></span>
+            <div class="zombie-lobby-options" style="margin-bottom:1rem;pointer-events:none;opacity:0.8">
+              <div class="zombie-lobby-setting">
+                <div class="zombie-toggle<%= game.theme_enabled !== 0 ? ' zombie-toggle-on' : '' %>"><span class="zombie-toggle-knob"></span></div>
+                <div>
+                  <div class="zombie-lobby-setting-label">Connections Mode</div>
+                  <div class="zombie-lobby-setting-desc"><%= game.theme_enabled !== 0 ? 'AI picks a theme — all zombie words are related' : 'Random words each round' %></div>
+                </div>
               </div>
-              <div>
-                <div class="zombie-lobby-setting-label">Connections Mode</div>
-                <div class="zombie-lobby-setting-desc">
-                  <%= game.theme_enabled !== 0 ? 'AI picks a theme — all zombie words are related' : 'Random words each round' %>
+              <div class="zombie-lobby-setting">
+                <div class="zombie-toggle<%= game.shop_enabled !== 0 ? ' zombie-toggle-on' : '' %>"><span class="zombie-toggle-knob"></span></div>
+                <div>
+                  <div class="zombie-lobby-setting-label">Supply Drop Shop</div>
+                  <div class="zombie-lobby-setting-desc"><%= game.shop_enabled !== 0 ? 'Shop opens every 2 waves' : 'No shop' %></div>
+                </div>
+              </div>
+              <div class="zombie-lobby-setting">
+                <div style="width:42px;flex-shrink:0"></div>
+                <div>
+                  <div class="zombie-lobby-setting-label">Guesses per Wave: <strong><%= (game.guess_scale || 'normal').charAt(0).toUpperCase() + (game.guess_scale || 'normal').slice(1) %></strong></div>
                 </div>
               </div>
             </div>
