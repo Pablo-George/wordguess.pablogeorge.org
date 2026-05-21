@@ -12,17 +12,26 @@ const PLAYER_COLORS = ['#4a90e2', '#f5a623', '#7ed321', '#9013fe', '#f5426e', '#
 const ADMIN_EMAIL = 'pablogeorgeporras@yahoo.com';
 
 const SHOP_ITEMS = {
-  extra_guess:  { name: '+1 Guess',       desc: 'Passive — permanently +1 guess every wave',                  cost: 12, max: 5, passive: true },
-  shield:       { name: 'Horde Shield',   desc: 'Passive — permanently one fewer zombie every wave (min 1)',   cost: 38, max: 2, passive: true },
-  guess_burst:  { name: '+3 Guesses',     desc: 'Bag — use mid-round to add 3 extra guesses right now',       cost: 30, max: 1 },
-  scout:        { name: 'Scout',          desc: 'Bag — reveals 1 random letter on 1 zombie',                  cost: 18, max: 3 },
-  sweep:        { name: 'First Letters',  desc: 'Bag — reveals first letter of every zombie',                 cost: 30, max: 1 },
-  last_letter:  { name: 'Last Letters',   desc: 'Bag — reveals last letter of every zombie',                  cost: 28, max: 1 },
-  mega_hint:    { name: 'Mega Scout',     desc: 'Bag — reveals 2 random letters on 1 zombie',                 cost: 35, max: 1 },
-  multi_scout:  { name: 'Full Sweep',     desc: 'Bag — reveals 1 random letter on every zombie',              cost: 42, max: 1 },
-  mega_shield:  { name: 'Mega Shield',    desc: 'Bag — instantly slays 1 random zombie',                      cost: 72, max: 1 },
-  safe_guess:   { name: 'Safe Guess',     desc: "Bag — next wrong guess won't count",                         cost: 32, max: 1 },
+  extra_guess:   { name: '+1 Guess',      desc: 'Passive — permanently +1 guess every wave',                  cost: 12, max: 5, passive: true },
+  shield:        { name: 'Horde Shield',  desc: 'Passive — permanently one fewer zombie every wave (min 1)',   cost: 38, max: 2, passive: true },
+  eagle_eye:     { name: 'Eagle Eye',     desc: 'Passive — reveals 1 free random letter per zombie each wave', cost: 25, max: 3, passive: true },
+  tough:         { name: 'Tough',         desc: 'Passive — +1 safe guess per wave (wrong guess forgiven)',     cost: 20, max: 3, passive: true },
+  scavenger:     { name: 'Scavenger',     desc: 'Passive — +10 bonus coins whenever you survive a wave',       cost: 30, max: 3, passive: true },
+  guess_burst:   { name: '+3 Guesses',    desc: 'Bag — use mid-round to add 3 extra guesses right now',       cost: 30, max: 1 },
+  medkit:        { name: 'Medkit',        desc: 'Bag — adds 2 extra guesses right now',                       cost: 10, max: 3 },
+  safe_guess:    { name: 'Safe Guess',    desc: "Bag — next wrong guess won't count",                         cost: 32, max: 1 },
+  scout:         { name: 'Scout',         desc: 'Bag — reveals 1 random letter on 1 zombie',                  cost: 18, max: 3 },
+  sweep:         { name: 'First Letters', desc: 'Bag — reveals first letter of every zombie',                 cost: 30, max: 1 },
+  last_letter:   { name: 'Last Letters',  desc: 'Bag — reveals last letter of every zombie',                  cost: 28, max: 1 },
+  reveal_vowels: { name: 'Vowel Scan',    desc: 'Bag — reveals all vowel positions on every zombie',          cost: 22, max: 2 },
+  mega_hint:     { name: 'Mega Scout',    desc: 'Bag — reveals 2 random letters on 1 zombie',                 cost: 35, max: 1 },
+  multi_scout:   { name: 'Full Sweep',    desc: 'Bag — reveals 1 random letter on every zombie',              cost: 42, max: 1 },
+  mega_shield:   { name: 'Mega Shield',   desc: 'Bag — instantly slays 1 random zombie',                      cost: 72, max: 1 },
+  grenade:       { name: 'Grenade',       desc: 'Bag — choose 1 zombie to instantly slay',                    cost: 55, max: 2 },
+  nuke:          { name: 'Nuke',          desc: 'Bag — instantly slays all remaining zombies',                 cost: 110, max: 1 },
 };
+
+const PASSIVE_TYPES = ['extra_guess', 'shield', 'eagle_eye', 'tough', 'scavenger'];
 
 function shuffleArray(arr) {
   const a = [...arr];
@@ -49,6 +58,26 @@ function computeFeedback(guess, answer) {
     }
   }
   return result;
+}
+
+function computeCoinsEarned(maxGuesses, guessCount, passiveItems) {
+  const scavengerCount = passiveItems.filter(i => i.type === 'scavenger').length;
+  return 10 + Math.max(0, (maxGuesses - guessCount) * 8) + scavengerCount * 10;
+}
+
+async function handleRoundSurvived(db, game, round, guessCount) {
+  const next = game.current_round + 1;
+  const passiveItems = JSON.parse(game.passive_items || '[]');
+  const coinsEarned = computeCoinsEarned(round.max_guesses, guessCount, passiveItems);
+  if (game.current_round % 2 === 0 && game.shop_enabled !== 0) {
+    const shopSelections = shuffleArray(Object.keys(SHOP_ITEMS)).slice(0, 3);
+    db.prepare("UPDATE zombie_games SET status = 'shop', current_round = ?, rounds_survived = rounds_survived + 1, coins = coins + ?, last_coins_earned = ?, shop_selections = ?, shop_ready = '[]' WHERE id = ?")
+      .run(next, coinsEarned, coinsEarned, JSON.stringify(shopSelections), game.id);
+  } else {
+    await startRound(db, game.id, next, game.theme_enabled !== 0, game.guess_scale || 'normal');
+    db.prepare("UPDATE zombie_games SET current_round = ?, rounds_survived = rounds_survived + 1, coins = coins + ?, last_coins_earned = ? WHERE id = ?")
+      .run(next, coinsEarned, coinsEarned, game.id);
+  }
 }
 
 // Round N: guesses scale based on host-selected scale
@@ -126,6 +155,8 @@ async function startRound(db, gameId, roundNumber, themeEnabled = true, guessSca
   const passiveItems = JSON.parse(game.passive_items || '[]');
   const wordLen = wordLengthForRound(roundNumber, game.word_escalation);
   const extraGuesses = passiveItems.filter(i => i.type === 'extra_guess').length;
+  const eagleEyeCount = passiveItems.filter(i => i.type === 'eagle_eye').length;
+  const toughCount = passiveItems.filter(i => i.type === 'tough').length;
   const shieldCount = passiveItems.filter(i => i.type === 'shield').length;
   const wordCount = Math.max(1, roundNumber - shieldCount);
 
@@ -162,8 +193,25 @@ async function startRound(db, gameId, roundNumber, themeEnabled = true, guessSca
 
   const maxGuesses = maxGuessesForRound(roundNumber, guessScale) + extraGuesses;
 
-  db.prepare('INSERT INTO zombie_rounds (game_id, round_number, words, max_guesses, theme) VALUES (?, ?, ?, ?, ?)')
-    .run(gameId, roundNumber, JSON.stringify(words), maxGuesses, theme);
+  // Apply eagle_eye: reveal 1 random letter per zombie per eagle_eye passive
+  const allPos = Array.from({ length: wordLen }, (_, i) => i);
+  const initialHintTiles = [];
+  if (eagleEyeCount > 0) {
+    words.forEach((w, wi) => {
+      for (let n = 0; n < eagleEyeCount; n++) {
+        const taken = initialHintTiles.filter(h => h.wordIndex === wi).map(h => h.tileIndex);
+        const avail = allPos.filter(p => !taken.includes(p));
+        if (avail.length > 0) {
+          const ti = avail[Math.floor(Math.random() * avail.length)];
+          initialHintTiles.push({ wordIndex: wi, tileIndex: ti, letter: w[ti] });
+        }
+      }
+    });
+  }
+
+  db.prepare('INSERT INTO zombie_rounds (game_id, round_number, words, max_guesses, theme, hint_tiles, safe_guesses) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(gameId, roundNumber, JSON.stringify(words), maxGuesses, theme,
+         initialHintTiles.length ? JSON.stringify(initialHintTiles) : null, toughCount);
 
   // Always kick off background generation for next round
   schedulePreGeneration(db, gameId, roundNumber + 1);
@@ -410,19 +458,8 @@ router.post('/games/zombie/:id/guess', ensureAuth, async (req, res) => {
   if (newSolvedMask.length === words.length) {
     roundOutcome = 'survived';
     db.prepare("UPDATE zombie_rounds SET solved_mask = ?, outcome = 'survived' WHERE id = ?").run(JSON.stringify(newSolvedMask), round.id);
-    const next = game.current_round + 1;
-    const coinsEarned = 10 + Math.max(0, (effectiveMaxGuesses - newGuessCount) * 8);
-
-    if (game.current_round % 2 === 0 && game.shop_enabled !== 0) {
-      // Shop time — pick 3 random items to offer
-      const shopSelections = shuffleArray(Object.keys(SHOP_ITEMS)).slice(0, 3);
-      db.prepare("UPDATE zombie_games SET status = 'shop', current_round = ?, rounds_survived = rounds_survived + 1, coins = coins + ?, last_coins_earned = ?, shop_selections = ?, shop_ready = '[]' WHERE id = ?")
-        .run(next, coinsEarned, coinsEarned, JSON.stringify(shopSelections), game.id);
-    } else {
-      await startRound(db, game.id, next, game.theme_enabled !== 0, game.guess_scale || 'normal');
-      db.prepare("UPDATE zombie_games SET current_round = ?, rounds_survived = rounds_survived + 1, coins = coins + ?, last_coins_earned = ? WHERE id = ?")
-        .run(next, coinsEarned, coinsEarned, game.id);
-    }
+    const roundForHelper = { ...round, max_guesses: effectiveMaxGuesses };
+    await handleRoundSurvived(db, game, roundForHelper, newGuessCount);
   } else if (newGuessCount >= effectiveMaxGuesses) {
     roundOutcome = 'overrun';
     gameOver = true;
@@ -494,7 +531,6 @@ router.post('/games/zombie/:id/shop/ready', ensureAuth, async (req, res) => {
 
   if (allReady) {
     const items = JSON.parse(game.shop_items || '[]');
-    const PASSIVE_TYPES = ['extra_guess', 'shield'];
     const newPassive = [...JSON.parse(game.passive_items || '[]'), ...items.filter(i => PASSIVE_TYPES.includes(i.type))];
     const newBag = [...JSON.parse(game.bag_items || '[]'), ...items.filter(i => !PASSIVE_TYPES.includes(i.type))];
     db.prepare('UPDATE zombie_games SET passive_items = ?, bag_items = ? WHERE id = ?')
@@ -513,7 +549,6 @@ router.post('/games/zombie/:id/shop/force-start', ensureAuth, async (req, res) =
   if (!game || game.status !== 'shop' || game.created_by !== req.user.id) return res.redirect('/games/zombie/' + req.params.id);
 
   const items = JSON.parse(game.shop_items || '[]');
-  const PASSIVE_TYPES = ['extra_guess', 'shield'];
   const newPassive = [...JSON.parse(game.passive_items || '[]'), ...items.filter(i => PASSIVE_TYPES.includes(i.type))];
   const newBag = [...JSON.parse(game.bag_items || '[]'), ...items.filter(i => !PASSIVE_TYPES.includes(i.type))];
   db.prepare('UPDATE zombie_games SET passive_items = ?, bag_items = ? WHERE id = ?')
@@ -611,24 +646,52 @@ router.post('/games/zombie/:id/use-item', ensureAuth, async (req, res) => {
       db.prepare('UPDATE zombie_games SET bag_items = ? WHERE id = ?').run(JSON.stringify(bagItems), game.id);
       if (solvedMask.length === words.length) {
         db.prepare("UPDATE zombie_rounds SET solved_mask = ?, outcome = 'survived' WHERE id = ?").run(JSON.stringify(solvedMask), round.id);
-        const next = game.current_round + 1;
         const { c: guessCount } = db.prepare('SELECT COUNT(*) as c FROM zombie_guesses WHERE round_id = ?').get(round.id);
-        const coinsEarned = 10 + Math.max(0, (round.max_guesses - guessCount) * 8);
-        if (game.current_round % 2 === 0 && game.shop_enabled !== 0) {
-          const shopSelections = shuffleArray(Object.keys(SHOP_ITEMS)).slice(0, 3);
-          db.prepare("UPDATE zombie_games SET status = 'shop', current_round = ?, rounds_survived = rounds_survived + 1, coins = coins + ?, last_coins_earned = ?, shop_selections = ?, shop_ready = '[]' WHERE id = ?")
-            .run(next, coinsEarned, coinsEarned, JSON.stringify(shopSelections), game.id);
-        } else {
-          await startRound(db, game.id, next, game.theme_enabled !== 0, game.guess_scale || 'normal');
-          db.prepare("UPDATE zombie_games SET current_round = ?, rounds_survived = rounds_survived + 1, coins = coins + ?, last_coins_earned = ? WHERE id = ?")
-            .run(next, coinsEarned, coinsEarned, game.id);
-        }
+        await handleRoundSurvived(db, game, round, guessCount);
       } else {
         db.prepare('UPDATE zombie_rounds SET solved_mask = ? WHERE id = ?').run(JSON.stringify(solvedMask), round.id);
       }
       broadcast('zombie', game.id, zombieGameState(db, game.id));
       return res.json({ ok: true });
     }
+  } else if (itemType === 'grenade') {
+    const targetIndex = parseInt(req.body.targetIndex, 10);
+    const unsolvedIdx = words.map((_, i) => i).filter(i => !solvedMask.includes(i));
+    if (isNaN(targetIndex) || !unsolvedIdx.includes(targetIndex)) return res.json({ error: 'Invalid target' });
+    solvedMask = [...solvedMask, targetIndex];
+    bagItems.splice(itemIdx, 1);
+    db.prepare('UPDATE zombie_games SET bag_items = ? WHERE id = ?').run(JSON.stringify(bagItems), game.id);
+    if (solvedMask.length === words.length) {
+      db.prepare("UPDATE zombie_rounds SET solved_mask = ?, outcome = 'survived' WHERE id = ?").run(JSON.stringify(solvedMask), round.id);
+      const { c: guessCount } = db.prepare('SELECT COUNT(*) as c FROM zombie_guesses WHERE round_id = ?').get(round.id);
+      await handleRoundSurvived(db, game, round, guessCount);
+    } else {
+      db.prepare('UPDATE zombie_rounds SET solved_mask = ? WHERE id = ?').run(JSON.stringify(solvedMask), round.id);
+    }
+    broadcast('zombie', game.id, zombieGameState(db, game.id));
+    return res.json({ ok: true });
+  } else if (itemType === 'nuke') {
+    solvedMask = words.map((_, i) => i);
+    bagItems.splice(itemIdx, 1);
+    db.prepare('UPDATE zombie_games SET bag_items = ? WHERE id = ?').run(JSON.stringify(bagItems), game.id);
+    db.prepare("UPDATE zombie_rounds SET solved_mask = ?, outcome = 'survived' WHERE id = ?").run(JSON.stringify(solvedMask), round.id);
+    const { c: nukeGuessCount } = db.prepare('SELECT COUNT(*) as c FROM zombie_guesses WHERE round_id = ?').get(round.id);
+    await handleRoundSurvived(db, game, round, nukeGuessCount);
+    broadcast('zombie', game.id, zombieGameState(db, game.id));
+    return res.json({ ok: true });
+  } else if (itemType === 'reveal_vowels') {
+    const VOWELS = new Set(['A', 'E', 'I', 'O', 'U']);
+    words.forEach((w, wi) => {
+      if (!solvedMask.includes(wi)) {
+        w.split('').forEach((letter, ti) => {
+          if (VOWELS.has(letter) && !hintTiles.find(h => h.wordIndex === wi && h.tileIndex === ti))
+            hintTiles.push({ wordIndex: wi, tileIndex: ti, letter });
+        });
+      }
+    });
+    db.prepare('UPDATE zombie_rounds SET hint_tiles = ? WHERE id = ?').run(JSON.stringify(hintTiles), round.id);
+  } else if (itemType === 'medkit') {
+    db.prepare('UPDATE zombie_rounds SET max_guesses = max_guesses + 2 WHERE id = ?').run(round.id);
   } else {
     return res.json({ error: 'Unknown item type' });
   }

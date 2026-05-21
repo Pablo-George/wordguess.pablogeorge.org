@@ -211,7 +211,7 @@
             <% }) %>
           </div>
 
-          <% var PASSIVE_TYPES_ARR = ['extra_guess', 'shield']; %>
+          <% var PASSIVE_TYPES_ARR = ['extra_guess', 'shield', 'eagle_eye', 'tough', 'scavenger']; %>
           <% if (passiveItems && passiveItems.length > 0) { %>
             <div class="zombie-shop-cart">
               <span class="zombie-shop-cart-label">⚡ Passive (every wave):</span>
@@ -331,6 +331,20 @@
                   <span class="zombie-bag-btn-use">USE</span>
                 </button>
               <% }) %>
+            </div>
+          </div>
+          <%# Grenade targeting overlay %>
+          <div id="grenade-overlay" class="zombie-target-overlay" style="display:none">
+            <div class="zombie-target-modal">
+              <div class="zombie-target-title">🎯 Select Target</div>
+              <div class="zombie-target-btns">
+                <% for (var b = 0; b < wordCount; b++) { %>
+                  <% if (solvedMask.indexOf(b) === -1) { %>
+                    <button class="zombie-target-btn" data-target="<%= b %>">Zombie <%= b + 1 %></button>
+                  <% } %>
+                <% } %>
+              </div>
+              <button class="btn grenade-cancel" style="margin-top:0.75rem">Cancel</button>
             </div>
           </div>
         <% } %>
@@ -496,32 +510,63 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   refreshKeyboardTarget();
 
-  // ── BAG ITEM USE ────────────────────────────────────────────
+  // ── BAG ITEM USE ───────────────────────────────────────────
+  function useItem(itemType, extra, sourceBtn) {
+    var body = Object.assign({ item: itemType }, extra);
+    fetch('/games/zombie/' + GAME_ID + '/use-item', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        if (sourceBtn) { sourceBtn.disabled = false; sourceBtn.style.opacity = ''; }
+        if (errorEl) errorEl.textContent = data.error;
+        return;
+      }
+      window.location.reload();
+    })
+    .catch(function() {
+      if (sourceBtn) { sourceBtn.disabled = false; sourceBtn.style.opacity = ''; }
+    });
+  }
+
+  var grenadeOverlay = document.getElementById('grenade-overlay');
+  if (grenadeOverlay) {
+    grenadeOverlay.querySelectorAll('.zombie-target-btn').forEach(function(tbtn) {
+      tbtn.addEventListener('click', function() {
+        var ti = parseInt(tbtn.getAttribute('data-target'), 10);
+        grenadeOverlay.style.display = 'none';
+        useItem('grenade', { targetIndex: ti }, null);
+      });
+    });
+  }
+
   document.querySelectorAll('.zombie-bag-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       if (submitting) return;
       var itemType = btn.getAttribute('data-item');
-      btn.disabled = true;
-      btn.style.opacity = '0.5';
-      fetch('/games/zombie/' + GAME_ID + '/use-item', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item: itemType }),
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.error) {
-          btn.disabled = false;
-          btn.style.opacity = '';
-          if (errorEl) errorEl.textContent = data.error;
-          return;
-        }
-        window.location.reload();
-      })
-      .catch(function() {
-        btn.disabled = false;
-        btn.style.opacity = '';
-      });
+
+      if (itemType === 'nuke') {
+        if (!confirm('Launch the nuke? This will slay ALL remaining zombies.')) return;
+        btn.disabled = true; btn.style.opacity = '0.5';
+        useItem('nuke', {}, btn);
+        return;
+      }
+
+      if (itemType === 'grenade' && grenadeOverlay) {
+        btn.disabled = true; btn.style.opacity = '0.5';
+        grenadeOverlay.style.display = 'flex';
+        grenadeOverlay.querySelector('.grenade-cancel').onclick = function() {
+          grenadeOverlay.style.display = 'none';
+          btn.disabled = false; btn.style.opacity = '';
+        };
+        return;
+      }
+
+      btn.disabled = true; btn.style.opacity = '0.5';
+      useItem(itemType, {}, btn);
     });
   });
 
