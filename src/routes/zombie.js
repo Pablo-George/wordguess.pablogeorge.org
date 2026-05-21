@@ -259,10 +259,29 @@ router.get('/games/zombie/:id', ensureAuth, (req, res) => {
   const shopItems = JSON.parse(game.shop_items || '[]');
   const shopEarned = req.query.earned ? parseInt(req.query.earned) : null;
 
+  // Friends leaderboard (self + accepted friends)
+  const friendIds = db.prepare(`
+    SELECT CASE WHEN user_id = ? THEN friend_id ELSE user_id END as id
+    FROM friends WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'
+  `).all(req.user.id, req.user.id, req.user.id).map(r => r.id);
+  const lbIds = [req.user.id, ...friendIds];
+  const leaderboard = db.prepare(`
+    SELECT u.id as user_id, u.display_name, u.avatar_url,
+           MAX(zg.rounds_survived) as best_waves,
+           COUNT(DISTINCT zp.game_id) as games_played
+    FROM zombie_players zp
+    JOIN zombie_games zg ON zg.id = zp.game_id AND zg.status = 'completed'
+    JOIN users u ON u.id = zp.user_id
+    WHERE zp.user_id IN (${lbIds.map(() => '?').join(',')})
+    GROUP BY zp.user_id
+    ORDER BY best_waves DESC
+    LIMIT 20
+  `).all(...lbIds);
+
   res.render('zombie_game', {
     title: 'Zombie Horde',
     game, players, myPlayer, round, guesses, wordCount, solvedMask, canGuess, revealWords,
-    theme, hints, priorRounds, shopSelections, shopItems, shopEarned, SHOP_ITEMS,
+    theme, hints, priorRounds, shopSelections, shopItems, shopEarned, SHOP_ITEMS, leaderboard,
   });
 });
 

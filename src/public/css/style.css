@@ -1380,6 +1380,40 @@ code {
   font-size: 0.78rem;
 }
 
+/* Zombie leaderboard */
+.zombie-lb-sub {
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.72rem;
+  font-weight: normal;
+  color: var(--text-dim);
+  margin-left: 0.4rem;
+  letter-spacing: 0;
+}
+.zombie-lb-list { display: flex; flex-direction: column; gap: 0.3rem; }
+.zombie-lb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  background: transparent;
+  transition: background 0.15s;
+}
+.zombie-lb-me { background: rgba(168,239,64,0.08); border: 1px solid rgba(168,239,64,0.25); }
+.zombie-lb-rank { width: 1.8rem; text-align: center; font-size: 0.85rem; flex-shrink: 0; color: var(--text-dim); }
+.zombie-lb-name { flex: 1; font-size: 0.9rem; }
+.zombie-lb-you {
+  font-size: 0.65rem;
+  background: rgba(168,239,64,0.2);
+  color: #a8ef40;
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  vertical-align: middle;
+  margin-left: 0.3rem;
+}
+.zombie-lb-score { font-weight: 700; font-size: 0.9rem; color: #a8ef40; flex-shrink: 0; }
+.zombie-lb-games { color: var(--text-dim); flex-shrink: 0; }
+
 @media (max-width: 640px) {
   .zombie-outer-layout.has-sidebar { grid-template-columns: 1fr; }
   .zombie-history { position: static; order: 2; margin-top: 2rem; }

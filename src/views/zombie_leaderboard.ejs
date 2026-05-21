@@ -1,0 +1,19 @@
+<% if (leaderboard && leaderboard.length > 0) { %>
+<section class="dash-section zombie-lb" style="margin-top:1.5rem">
+  <h2>🏆 High Scores <span class="zombie-lb-sub">friends</span></h2>
+  <div class="zombie-lb-list">
+    <% leaderboard.forEach(function(entry, i) { %>
+      <% var isMe = String(entry.user_id) === String(currentUserId); %>
+      <div class="zombie-lb-row<%= isMe ? ' zombie-lb-me' : '' %>">
+        <span class="zombie-lb-rank">
+          <% if (i === 0) { %>🥇<% } else if (i === 1) { %>🥈<% } else if (i === 2) { %>🥉<% } else { %><%= i + 1 %><% } %>
+        </span>
+        <img src="<%= entry.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+        <span class="zombie-lb-name"><%= entry.display_name %><% if (isMe) { %> <span class="zombie-lb-you">you</span><% } %></span>
+        <span class="zombie-lb-score"><%= entry.best_waves %> wave<%= entry.best_waves !== 1 ? 's' : '' %></span>
+        <span class="zombie-lb-games text-sm"><%= entry.games_played %> game<%= entry.games_played !== 1 ? 's' : '' %></span>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<% } %>

@@ -138,6 +138,9 @@
           <% } %>
         </section>
 
+        <%# Leaderboard %>
+        <%- include('zombie_leaderboard', { leaderboard, currentUserId: user.id }) %>
+
       <%# ── SHOP ───────────────────────────────────────── %>
       <% } else if (game.status === 'shop') { %>
         <div class="zombie-shop">
@@ -285,6 +288,7 @@
             </form>
             <a href="/games" class="btn">Games</a>
           </div>
+          <%- include('zombie_leaderboard', { leaderboard, currentUserId: user.id }) %>
         <% } %>
 
         <%# Guess input %>
