@@ -3,146 +3,264 @@
 
   <h1>🧟 Zombie Horde</h1>
 
-  <%# ── WAITING LOBBY ──────────────────────────────── %>
-  <% if (game.status === 'waiting') { %>
-    <p class="puzzle-date">Game #<%= game.id %> &nbsp;·&nbsp; Co-op Survival</p>
-    <section class="dash-section" id="lobby-section" data-game-type="zombie" data-game-id="<%= game.id %>" data-created-by="<%= game.created_by %>">
-      <h2>Assemble your squad</h2>
+  <div class="zombie-outer-layout<%= priorRounds && priorRounds.length > 0 ? ' has-sidebar' : '' %>">
 
-      <div class="member-list" style="margin:1.5rem 0">
-        <% players.forEach(function(p) { %>
-          <div class="member-card">
-            <img src="<%= p.avatar_url || '' %>" alt="" class="member-avatar" onerror="this.style.display='none'">
-            <div class="member-info"><strong><%= p.display_name %></strong></div>
-            <% if (p.user_id === game.created_by) { %><span class="badge">Host</span><% } %>
+    <%# ── LEFT SIDEBAR: wave history ──────────────────── %>
+    <% if (priorRounds && priorRounds.length > 0) { %>
+    <aside class="zombie-history">
+      <div class="zombie-history-title">Wave Log</div>
+      <% priorRounds.forEach(function(r) { %>
+        <div class="zombie-history-round">
+          <div class="zombie-history-wave">Wave <%= r.roundNumber %><% if (r.theme) { %><br><em class="zombie-history-theme"><%= r.theme %></em><% } %></div>
+          <div class="zombie-history-words">
+            <% r.words.forEach(function(w) { %>
+              <span class="zombie-history-word"><%= w %></span>
+            <% }) %>
           </div>
-        <% }) %>
-      </div>
-
-      <% if (!myPlayer) { %>
-        <form action="/games/zombie/<%= game.id %>/join" method="POST">
-          <button type="submit" class="btn btn-primary">Join Game</button>
-        </form>
-      <% } else if (user.id === game.created_by) { %>
-        <p class="text-sm" style="margin-bottom:0.75rem">
-          Round 1 starts with 1 zombie. Each wave you clear adds another.
-        </p>
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-          <form action="/games/zombie/<%= game.id %>/start" method="POST">
-            <button type="submit" class="btn btn-primary">Start Game</button>
-          </form>
-          <form action="/games/zombie/<%= game.id %>/cancel" method="POST">
-            <button type="submit" class="btn btn-danger">Close Lobby</button>
-          </form>
         </div>
-      <% } else { %>
-        <p class="text-sm">Waiting for the host to start...</p>
-      <% } %>
-    </section>
+      <% }) %>
+    </aside>
+    <% } %>
 
-  <%# ── ACTIVE / COMPLETED ─────────────────────────── %>
-  <% } else if (round) { %>
-    <%
-      var guessesUsed = guesses.length;
-      var guessesLeft = round.max_guesses - guessesUsed;
-      var proximityPct = Math.round(guessesUsed / round.max_guesses * 100);
-    %>
+    <div class="zombie-main">
 
-    <p class="puzzle-date">
-      Wave <%= game.current_round %> &nbsp;·&nbsp;
-      <%= wordCount %> zombie<%= wordCount !== 1 ? 's' : '' %> &nbsp;·&nbsp;
-      <%= game.rounds_survived %> wave<%= game.rounds_survived !== 1 ? 's' : '' %> survived
-    </p>
+      <%# ── WAITING LOBBY ──────────────────────────────── %>
+      <% if (game.status === 'waiting') { %>
+        <p class="puzzle-date">Game #<%= game.id %> &nbsp;·&nbsp; Co-op Survival</p>
+        <section class="dash-section" id="lobby-section" data-game-type="zombie" data-game-id="<%= game.id %>" data-created-by="<%= game.created_by %>">
+          <h2>Assemble your squad</h2>
 
-    <%# Proximity meter %>
-    <div class="zombie-proximity-wrap">
-      <div class="zombie-proximity-label">
-        <span>🧟 PROXIMITY</span>
-        <span id="guesses-left-label"><%= guessesLeft %> guess<%= guessesLeft !== 1 ? 'es' : '' %> remaining</span>
-      </div>
-      <div class="zombie-proximity-bar">
-        <div class="zombie-proximity-fill" id="proximity-fill" style="width:<%= proximityPct %>%"></div>
-      </div>
-    </div>
-
-    <%# Zombie boards %>
-    <div class="zombie-horde-grid" id="zombie-horde-grid"
-         data-status="<%= game.status %>"
-         data-round="<%= game.current_round %>"
-         data-count="<%= wordCount %>">
-
-      <% for (var b = 0; b < wordCount; b++) { %>
-        <% var beaten = solvedMask.indexOf(b) !== -1; %>
-        <div class="zombie-board-wrap <%= beaten ? 'zombie-beaten' : '' %>" id="zombie-wrap-<%= b %>">
-          <div class="zombie-label">
-            <% if (beaten) { %>💀 ZOMBIE <%= b + 1 %> SLAIN<% } else { %>🧟 ZOMBIE <%= b + 1 %><% } %>
-          </div>
-          <div class="board zombie-board" id="zombie-board-<%= b %>">
-            <% guesses.forEach(function(g) { %>
-              <div class="row" data-filled="1">
-                <% g.results[b].forEach(function(r) { %>
-                  <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
-                <% }) %>
+          <div class="member-list" style="margin:1.5rem 0">
+            <% players.forEach(function(p) { %>
+              <div class="member-card">
+                <img src="<%= p.avatar_url || '' %>" alt="" class="member-avatar" onerror="this.style.display='none'">
+                <div class="member-info"><strong><%= p.display_name %></strong></div>
+                <% if (p.user_id === game.created_by) { %><span class="badge">Host</span><% } %>
               </div>
             <% }) %>
-            <% if (!beaten && game.status === 'active') { %>
-              <% for (var j = guesses.length; j < round.max_guesses; j++) { %>
-                <div class="row">
-                  <% for (var k = 0; k < 5; k++) { %>
-                    <div class="tile tile-empty"></div>
-                  <% } %>
-                </div>
-              <% } %>
-            <% } %>
           </div>
-          <% if (revealWords && !beaten) { %>
-            <div class="zombie-reveal">THE WORD WAS <strong><%= revealWords[b] %></strong></div>
+
+          <% if (!myPlayer) { %>
+            <form action="/games/zombie/<%= game.id %>/join" method="POST">
+              <button type="submit" class="btn btn-primary">Join Game</button>
+            </form>
+          <% } else if (user.id === game.created_by) { %>
+            <p class="text-sm" style="margin-bottom:0.75rem">
+              Round 1 starts with 1 zombie. Each wave you clear adds another.
+            </p>
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+              <form action="/games/zombie/<%= game.id %>/start" method="POST" id="zombie-start-form">
+                <button type="submit" class="btn btn-primary" id="zombie-start-btn">Start Game</button>
+              </form>
+              <form action="/games/zombie/<%= game.id %>/cancel" method="POST">
+                <button type="submit" class="btn btn-danger">Close Lobby</button>
+              </form>
+            </div>
+            <script>
+            document.getElementById('zombie-start-form').addEventListener('submit', function() {
+              var btn = document.getElementById('zombie-start-btn');
+              btn.disabled = true;
+              btn.textContent = 'Picking themed words…';
+            });
+            </script>
+          <% } else { %>
+            <p class="text-sm">Waiting for the host to start...</p>
           <% } %>
+        </section>
+
+      <%# ── SHOP ───────────────────────────────────────── %>
+      <% } else if (game.status === 'shop') { %>
+        <div class="zombie-shop">
+          <div class="zombie-shop-header">
+            <div class="zombie-shop-title">🛒 Supply Drop</div>
+            <div class="zombie-shop-subtitle">Wave <%= game.current_round - 1 %> survived — prepare for Wave <%= game.current_round %></div>
+            <% if (shopEarned) { %>
+              <div class="zombie-shop-earned">+<%= shopEarned %> coins earned this wave</div>
+            <% } %>
+            <div class="zombie-shop-coins">💰 <strong><%= game.coins %></strong> coins</div>
+          </div>
+
+          <div class="zombie-shop-grid">
+            <% shopSelections.forEach(function(type) { %>
+              <% var def = SHOP_ITEMS[type]; %>
+              <% if (!def) return; %>
+              <% var owned = shopItems.filter(function(i) { return i.type === type; }).length; %>
+              <% var canBuy = game.coins >= def.cost && owned < def.max; %>
+              <div class="zombie-shop-item<%= canBuy ? '' : ' zombie-shop-item-dim' %>">
+                <div class="zombie-shop-item-name"><%= def.name %></div>
+                <div class="zombie-shop-item-desc"><%= def.desc %></div>
+                <div class="zombie-shop-item-footer">
+                  <span class="zombie-shop-cost">💰 <%= def.cost %></span>
+                  <% if (owned > 0) { %><span class="zombie-shop-owned"><%= owned %> owned</span><% } %>
+                  <form action="/games/zombie/<%= game.id %>/shop/buy" method="POST" style="display:inline;margin:0">
+                    <input type="hidden" name="item" value="<%= type %>">
+                    <button type="submit" class="btn btn-sm btn-primary" <%= canBuy ? '' : 'disabled' %>>Buy</button>
+                  </form>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+
+          <% if (shopItems.length > 0) { %>
+            <div class="zombie-shop-cart">
+              <span class="zombie-shop-cart-label">Kit:</span>
+              <% shopItems.forEach(function(item) { %>
+                <% var d = SHOP_ITEMS[item.type]; %>
+                <span class="zombie-shop-cart-tag"><%= d ? d.name : item.type %></span>
+              <% }) %>
+            </div>
+          <% } %>
+
+          <form action="/games/zombie/<%= game.id %>/shop/continue" method="POST" style="margin-top:1.75rem">
+            <button type="submit" class="btn btn-primary" id="shop-continue-btn">
+              Continue to Wave <%= game.current_round %> →
+            </button>
+          </form>
+          <script>
+          document.querySelector('[action$="/shop/continue"]').addEventListener('submit', function() {
+            var btn = document.getElementById('shop-continue-btn');
+            btn.disabled = true;
+            btn.textContent = 'Picking themed words…';
+          });
+          </script>
         </div>
+
+      <%# ── ACTIVE / COMPLETED ─────────────────────────── %>
+      <% } else if (round) { %>
+        <%
+          var guessesUsed = guesses.length;
+          var guessesLeft = round.max_guesses - guessesUsed;
+          var proximityPct = Math.round(guessesUsed / round.max_guesses * 100);
+        %>
+
+        <p class="puzzle-date">
+          Wave <%= game.current_round %> &nbsp;·&nbsp;
+          <%= wordCount %> zombie<%= wordCount !== 1 ? 's' : '' %> &nbsp;·&nbsp;
+          <%= game.rounds_survived %> wave<%= game.rounds_survived !== 1 ? 's' : '' %> survived
+        </p>
+
+        <% if (theme) { %>
+          <div class="zombie-theme-banner">
+            <span class="zombie-theme-label">THEME</span>
+            <span class="zombie-theme-name"><%= theme %></span>
+          </div>
+        <% } %>
+
+        <%# Safe guess indicator %>
+        <% if (round.safe_guesses > 0 && game.status === 'active') { %>
+          <div class="zombie-safe-indicator">🛡️ Safe Guess ready</div>
+        <% } %>
+
+        <%# Proximity meter %>
+        <div class="zombie-proximity-wrap">
+          <div class="zombie-proximity-label">
+            <span>🧟 PROXIMITY</span>
+            <span id="guesses-left-label"><%= guessesLeft %> guess<%= guessesLeft !== 1 ? 'es' : '' %> remaining</span>
+          </div>
+          <div class="zombie-proximity-bar">
+            <div class="zombie-proximity-fill" id="proximity-fill" style="width:<%= proximityPct %>%"></div>
+          </div>
+        </div>
+
+        <%# Zombie boards %>
+        <div class="zombie-horde-grid" id="zombie-horde-grid"
+             data-status="<%= game.status %>"
+             data-round="<%= game.current_round %>"
+             data-count="<%= wordCount %>">
+
+          <% for (var b = 0; b < wordCount; b++) { %>
+            <% var beaten = solvedMask.indexOf(b) !== -1; %>
+            <% var boardHints = hints.filter(function(h) { return h.wordIndex === b; }); %>
+            <div class="zombie-board-wrap <%= beaten ? 'zombie-beaten' : '' %>" id="zombie-wrap-<%= b %>">
+              <div class="zombie-label">
+                <% if (beaten) { %>💀 ZOMBIE <%= b + 1 %> SLAIN<% } else { %>🧟 ZOMBIE <%= b + 1 %><% } %>
+                <% boardHints.forEach(function(h) { %>
+                  <span class="zombie-hint-badge">P<%= h.tileIndex + 1 %>:<%= h.letter %></span>
+                <% }) %>
+              </div>
+              <div class="board zombie-board" id="zombie-board-<%= b %>">
+                <% guesses.forEach(function(g) { %>
+                  <div class="row" data-filled="1">
+                    <% g.results[b].forEach(function(r) { %>
+                      <div class="tile tile-<%= r.status %>"><%= r.letter %></div>
+                    <% }) %>
+                  </div>
+                <% }) %>
+                <% if (!beaten && game.status === 'active') { %>
+                  <% for (var j = guesses.length; j < round.max_guesses; j++) { %>
+                    <div class="row">
+                      <% for (var k = 0; k < 5; k++) { %>
+                        <div class="tile tile-empty"></div>
+                      <% } %>
+                    </div>
+                  <% } %>
+                <% } %>
+              </div>
+              <% if (revealWords && !beaten) { %>
+                <div class="zombie-reveal">THE WORD WAS <strong><%= revealWords[b] %></strong></div>
+              <% } %>
+            </div>
+          <% } %>
+
+        </div>
+
+        <%# Game over %>
+        <% if (game.status === 'completed') { %>
+          <div class="result-message fail" style="text-align:center;margin:1.5rem 0">
+            🧟 OVERRUN — You survived <%= game.rounds_survived %> wave<%= game.rounds_survived !== 1 ? 's' : '' %>
+          </div>
+          <div style="text-align:center;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem">
+            <form action="/games/zombie" method="POST">
+              <button type="submit" class="btn btn-primary">Try Again</button>
+            </form>
+            <a href="/games" class="btn">Games</a>
+          </div>
+        <% } %>
+
+        <%# Guess input %>
+        <% if (canGuess) { %>
+          <form id="zombie-guess-form" style="margin:0" data-game-id="<%= game.id %>">
+            <input type="text" id="zombie-guess-input" maxlength="5"
+                   autocomplete="off" spellcheck="false" inputmode="none" style="display:none">
+          </form>
+          <div id="zombie-error" class="error-msg" style="text-align:center"></div>
+          <div id="game-keyboard" data-board="zombie-board-0" data-input="zombie-guess-input" data-form="zombie-guess-form"></div>
+        <% } %>
+
+        <%# Players %>
+        <section class="dash-section" style="margin-top:2rem">
+          <h2>Squad</h2>
+          <div class="player-status-list">
+            <% players.forEach(function(p) { %>
+              <div class="player-status-item">
+                <span class="player-color-dot" style="background:<%= p.color || '#888' %>"></span>
+                <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
+                <span><%= p.display_name %></span>
+              </div>
+            <% }) %>
+          </div>
+        </section>
+
       <% } %>
 
-    </div>
+    </div><!-- .zombie-main -->
+  </div><!-- .zombie-outer-layout -->
+</div><!-- .zombie-page -->
 
-    <%# Game over %>
-    <% if (game.status === 'completed') { %>
-      <div class="result-message fail" style="text-align:center;margin:1.5rem 0">
-        🧟 OVERRUN — You survived <%= game.rounds_survived %> wave<%= game.rounds_survived !== 1 ? 's' : '' %>
-      </div>
-      <div style="text-align:center;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem">
-        <form action="/games/zombie" method="POST">
-          <button type="submit" class="btn btn-primary">Try Again</button>
-        </form>
-        <a href="/games" class="btn">Games</a>
-      </div>
-    <% } %>
+<%# ── SHOP WS: reload when shop ends ───────────────── %>
+<% if (game.status === 'shop') { %>
+<script>
+(function() {
+  if (window.wsJoin) {
+    window.wsJoin('zombie', '<%= game.id %>', function(data) {
+      if (data.status === 'active') window.location.reload();
+    });
+  }
+})();
+</script>
+<% } %>
 
-    <%# Guess input %>
-    <% if (canGuess) { %>
-      <form id="zombie-guess-form" style="margin:0" data-game-id="<%= game.id %>">
-        <input type="text" id="zombie-guess-input" maxlength="5"
-               autocomplete="off" spellcheck="false" inputmode="none" style="display:none">
-      </form>
-      <div id="zombie-error" class="error-msg" style="text-align:center"></div>
-      <div id="game-keyboard" data-board="zombie-board-0" data-input="zombie-guess-input" data-form="zombie-guess-form"></div>
-    <% } %>
-
-    <%# Players %>
-    <section class="dash-section" style="margin-top:2rem">
-      <h2>Squad</h2>
-      <div class="player-status-list">
-        <% players.forEach(function(p) { %>
-          <div class="player-status-item">
-            <span class="player-color-dot" style="background:<%= p.color || '#888' %>"></span>
-            <img src="<%= p.avatar_url || '' %>" alt="" class="mini-avatar" onerror="this.style.display='none'">
-            <span><%= p.display_name %></span>
-          </div>
-        <% }) %>
-      </div>
-    </section>
-
-  <% } %>
-</div>
-
+<%# ── ACTIVE GAME SCRIPT ─────────────────────────── %>
 <% if (game.status !== 'waiting' && round) { %>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -233,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (wrap && !wrap.classList.contains('zombie-beaten')) {
         wrap.classList.add('zombie-beaten');
         var lbl = wrap.querySelector('.zombie-label');
-        if (lbl) lbl.textContent = '💀 ZOMBIE ' + (bi + 1) + ' SLAIN';
+        if (lbl) lbl.textContent = '\u{1F480} ZOMBIE ' + (bi + 1) + ' SLAIN';
       }
     }
     refreshKeyboardTarget();
@@ -285,6 +403,11 @@ document.addEventListener('DOMContentLoaded', function() {
         input.value = '';
         window.tileColors = [];
         if (window.syncKeyboardTiles) window.syncKeyboardTiles();
+
+        if (data.safeGuessUsed) {
+          MAX_GUESSES = data.maxGuesses;
+          showBanner('🛡️ Safe Guess!', '#f59e0b', '#000');
+        }
 
         var dur = animateGuess(data.results, true);
         guessesUsed++;
@@ -362,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.syncKeyboardTiles) window.syncKeyboardTiles();
   }
 
-  // WebSocket – co-op real-time (see other players' guesses and keystrokes)
+  // WebSocket – co-op real-time
   var hordeGrid = document.getElementById('zombie-horde-grid');
   if (hordeGrid && hordeGrid.getAttribute('data-status') === 'active') {
     window.wsJoin('zombie', GAME_ID, function(data) {
@@ -371,12 +494,11 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       if (submitting) return;
-      if (data.status === 'completed') { window.location.reload(); return; }
+      if (data.status === 'completed' || data.status === 'shop') { window.location.reload(); return; }
       if (data.currentRound && data.currentRound !== CURRENT_ROUND) { window.location.reload(); return; }
       if (!data.guesses || !data.round) return;
       var localCount = document.querySelectorAll('#zombie-board-0 .row[data-filled]').length;
       if (data.guesses.length > localCount) {
-        // Clear typing preview before animating the incoming guess
         var inp = document.getElementById('zombie-guess-input');
         if (inp) inp.value = '';
         window.tileColors = [];

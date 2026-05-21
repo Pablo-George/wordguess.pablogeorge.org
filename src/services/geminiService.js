@@ -56,4 +56,54 @@ Rules:
   }
 }
 
-module.exports = { generateAnimeQuote };
+async function generateZombieTheme(wordCount, retries = 3) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+  const prompt = `You are creating content for a collaborative Wordle-style word guessing game.
+Players must guess ${wordCount} mystery 5-letter word${wordCount > 1 ? 's' : ''} that ${wordCount > 1 ? 'all share' : 'belongs to'} a theme.
+
+Choose a fun, specific theme and provide exactly ${wordCount} common 5-letter English word${wordCount > 1 ? 's' : ''} that fit it.
+Rules:
+- Words must be exactly 5 letters, ALL CAPS
+- Use only common everyday words a native English speaker would know (Wordle-style)
+- No proper nouns, no abbreviations, no plurals ending in -S unless the base word is 4 letters, no obscure words
+- All words must be different from each other
+- Theme should be specific and fun (e.g. "Types of Pasta" not just "Food")
+
+Return ONLY valid JSON, no markdown, no explanation:
+{"theme":"Theme Name Here","words":["WORD1","WORD2"]}`;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const result = await model.generateContent(prompt);
+      const raw = result.response.text().trim()
+        .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      const parsed = JSON.parse(raw);
+      if (!parsed.theme || !Array.isArray(parsed.words) || parsed.words.length !== wordCount) {
+        throw new SyntaxError('Unexpected shape');
+      }
+      const words = parsed.words.map(w => String(w).toUpperCase().replace(/[^A-Z]/g, ''));
+      if (words.some(w => w.length !== 5)) throw new SyntaxError('Bad word length');
+      return { theme: parsed.theme.trim(), words };
+    } catch (err) {
+      const isRetryable =
+        err instanceof SyntaxError ||
+        (err.message && (
+          err.message.includes('503') ||
+          err.message.includes('429') ||
+          err.message.includes('overloaded') ||
+          err.message.includes('high demand')
+        ));
+      if (!isRetryable || attempt === retries) throw err;
+      const delay = Math.min(1000 * 2 ** attempt + Math.random() * 500, 16000);
+      console.warn(`Gemini zombie theme attempt ${attempt + 1} failed, retrying in ${Math.round(delay)}ms...`);
+      await sleep(delay);
+    }
+  }
+}
+
+module.exports = { generateAnimeQuote, generateZombieTheme };

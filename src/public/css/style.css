@@ -1165,7 +1165,160 @@ code {
 .feed-tile-gray   { background: #3a3a4a; }
 
 /* ── ZOMBIE HORDE ────────────────────────────── */
-.zombie-page { max-width: 960px; margin: 0 auto; }
+.zombie-page { max-width: 1100px; margin: 0 auto; }
+
+.zombie-outer-layout { display: block; }
+.zombie-outer-layout.has-sidebar {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.zombie-main { min-width: 0; }
+
+/* Wave history sidebar */
+.zombie-history {
+  position: sticky;
+  top: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.78rem;
+}
+.zombie-history-title {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+.zombie-history-round { margin-bottom: 1rem; }
+.zombie-history-wave {
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  margin-bottom: 0.25rem;
+}
+.zombie-history-theme {
+  font-style: italic;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-weight: normal;
+}
+.zombie-history-words { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.zombie-history-word {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  background: rgba(168,239,64,0.12);
+  color: #a8ef40;
+  border-radius: 3px;
+  padding: 0.1rem 0.3rem;
+}
+
+/* Safe guess indicator */
+.zombie-safe-indicator {
+  display: inline-block;
+  background: rgba(245,166,35,0.15);
+  border: 1px solid rgba(245,166,35,0.4);
+  color: #f5a623;
+  border-radius: 4px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Hint badge on zombie label */
+.zombie-hint-badge {
+  display: inline-block;
+  background: rgba(74,144,226,0.2);
+  border: 1px solid rgba(74,144,226,0.5);
+  color: #4a90e2;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.3rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+/* Shop */
+.zombie-shop { max-width: 600px; }
+.zombie-shop-header { margin-bottom: 1.5rem; }
+.zombie-shop-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 0.05em;
+  color: #a8ef40;
+  margin-bottom: 0.25rem;
+}
+.zombie-shop-subtitle { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 0.5rem; }
+.zombie-shop-earned {
+  display: inline-block;
+  background: rgba(168,239,64,0.15);
+  border: 1px solid rgba(168,239,64,0.3);
+  color: #a8ef40;
+  border-radius: 4px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.5rem;
+}
+.zombie-shop-coins { font-size: 1.05rem; color: var(--text); }
+.zombie-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.zombie-shop-item {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.zombie-shop-item-dim { opacity: 0.5; }
+.zombie-shop-item-name { font-weight: 700; font-size: 0.9rem; color: var(--text); }
+.zombie-shop-item-desc { font-size: 0.78rem; color: var(--text-dim); flex: 1; }
+.zombie-shop-item-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+.zombie-shop-cost { font-size: 0.82rem; color: #f5a623; font-weight: 600; }
+.zombie-shop-owned { font-size: 0.72rem; color: #a8ef40; }
+.zombie-shop-cart {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.85rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.zombie-shop-cart-label { font-size: 0.78rem; color: var(--text-dim); flex-shrink: 0; }
+.zombie-shop-cart-tag {
+  background: rgba(74,144,226,0.15);
+  border: 1px solid rgba(74,144,226,0.35);
+  color: #4a90e2;
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .zombie-outer-layout.has-sidebar { grid-template-columns: 1fr; }
+  .zombie-history { position: static; order: 2; margin-top: 2rem; }
+  .zombie-main { order: 1; }
+}
 
 .zombie-proximity-wrap { margin: 0.75rem 0 1.5rem; }
 .zombie-proximity-label {
@@ -1225,6 +1378,30 @@ code {
 }
 
 /* Tile sizes scale with board count */
+.zombie-theme-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(168, 239, 64, 0.1);
+  border: 1px solid rgba(168, 239, 64, 0.35);
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+}
+.zombie-theme-label {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.zombie-theme-name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
+  color: #a8ef40;
+}
+
 .zombie-board { margin: 0; }
 .zombie-board .tile { width: 52px; height: 52px; font-size: 1.75rem; }
 
