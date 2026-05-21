@@ -996,6 +996,19 @@ code {
 }
 
 
+.aq-loader-ring {
+  width: 64px;
+  height: 64px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: aqSpin 1s linear infinite;
+}
+
+@keyframes aqSpin {
+  to { transform: rotate(360deg); }
+}
+
 .aq-full-quote {
   font-style: italic;
   font-size: 1.05rem;
