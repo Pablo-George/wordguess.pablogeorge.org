@@ -56,7 +56,7 @@ Rules:
   }
 }
 
-async function generateZombieTheme(wordCount, retries = 3) {
+async function generateZombieTheme(wordCount, wordLength = 5, retries = 3) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
@@ -64,15 +64,15 @@ async function generateZombieTheme(wordCount, retries = 3) {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const prompt = `You are creating content for a collaborative Wordle-style word guessing game.
-Players must guess ${wordCount} mystery 5-letter word${wordCount > 1 ? 's' : ''} that ${wordCount > 1 ? 'all share' : 'belongs to'} a theme.
+Players must guess ${wordCount} mystery ${wordLength}-letter word${wordCount > 1 ? 's' : ''} that ${wordCount > 1 ? 'all share' : 'belongs to'} a theme.
 
-Choose a fun, specific theme and provide exactly ${wordCount} common 5-letter English word${wordCount > 1 ? 's' : ''} that fit it.
+Choose a fun, specific theme and provide exactly ${wordCount} common ${wordLength}-letter English word${wordCount > 1 ? 's' : ''} that fit it.
 Rules:
-- Words must be exactly 5 letters, ALL CAPS
-- Use only common everyday words a native English speaker would know (Wordle-style)
-- No proper nouns, no abbreviations, no plurals ending in -S unless the base word is 4 letters, no obscure words
+- Words must be exactly ${wordLength} letters, ALL CAPS
+- Use only common everyday words a native English speaker would know
+- No proper nouns, no abbreviations, no obscure words
 - All words must be different from each other
-- Theme should be specific and fun (e.g. "Types of Pasta" not just "Food")
+- Theme should be specific and fun (e.g. "Things in a Kitchen" not just "Food")
 
 Return ONLY valid JSON, no markdown, no explanation:
 {"theme":"Theme Name Here","words":["WORD1","WORD2"]}`;
@@ -87,7 +87,7 @@ Return ONLY valid JSON, no markdown, no explanation:
         throw new SyntaxError('Unexpected shape');
       }
       const words = parsed.words.map(w => String(w).toUpperCase().replace(/[^A-Z]/g, ''));
-      if (words.some(w => w.length !== 5)) throw new SyntaxError('Bad word length');
+      if (words.some(w => w.length !== wordLength)) throw new SyntaxError('Bad word length');
       return { theme: parsed.theme.trim(), words };
     } catch (err) {
       const isRetryable =

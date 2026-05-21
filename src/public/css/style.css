@@ -1397,6 +1397,80 @@ code {
   padding: 0.15rem 0.45rem;
   font-size: 0.78rem;
 }
+/* Passive perks bar */
+.zombie-passive-perks {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.75rem;
+  background: rgba(168,239,64,0.06);
+  border: 1px solid rgba(168,239,64,0.22);
+  border-radius: 6px;
+  margin-bottom: 0.6rem;
+}
+.zombie-passive-label {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #a8ef40;
+  flex-shrink: 0;
+}
+.zombie-passive-tag {
+  background: rgba(168,239,64,0.12);
+  color: #a8ef40;
+  border: 1px solid rgba(168,239,64,0.28);
+  border-radius: 4px;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.78rem;
+}
+/* Bag section */
+.zombie-bag {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.75rem;
+  background: rgba(245,166,35,0.06);
+  border: 1px solid rgba(245,166,35,0.22);
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+}
+.zombie-bag-label {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #f5a623;
+  flex-shrink: 0;
+}
+.zombie-bag-items { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+.zombie-bag-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(245,166,35,0.1);
+  border: 1px solid rgba(245,166,35,0.35);
+  color: var(--text);
+  border-radius: 5px;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-family: var(--font-body);
+  transition: background 0.15s, border-color 0.15s;
+}
+.zombie-bag-btn:hover:not(:disabled) {
+  background: rgba(245,166,35,0.2);
+  border-color: rgba(245,166,35,0.55);
+}
+.zombie-bag-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.zombie-bag-btn-name { font-weight: 600; }
+.zombie-bag-btn-use {
+  font-size: 0.65rem;
+  background: rgba(245,166,35,0.28);
+  color: #f5a623;
+  border-radius: 3px;
+  padding: 0.05rem 0.28rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
 .zombie-shop-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
@@ -1433,6 +1507,7 @@ code {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 6px;
+  margin-bottom: 0.5rem;
 }
 .zombie-shop-cart-label { font-size: 0.78rem; color: var(--text-dim); flex-shrink: 0; }
 .zombie-shop-cart-tag {
@@ -1443,6 +1518,45 @@ code {
   padding: 0.15rem 0.5rem;
   font-size: 0.78rem;
 }
+
+/* Dev mode */
+#dev-toggle-btn {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  cursor: pointer;
+  font-size: 1rem;
+  opacity: 0.45;
+  transition: opacity 0.15s;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#dev-toggle-btn:hover, #dev-toggle-btn.dev-toggle-active { opacity: 1; }
+#dev-toggle-btn.dev-toggle-active { background: rgba(168,239,64,0.15); border-color: rgba(168,239,64,0.5); }
+#dev-panel {
+  position: fixed;
+  bottom: 4rem;
+  right: 1rem;
+  background: var(--card-bg);
+  border: 1px solid rgba(168,239,64,0.35);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  z-index: 900;
+  min-width: 180px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.dev-panel-title { font-size: 0.72rem; color: #a8ef40; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.dev-panel-word { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; }
+.dev-panel-num { font-size: 0.72rem; color: var(--text-dim); width: 1rem; text-align: right; flex-shrink: 0; }
+.dev-panel-answer { font-family: var(--font-display); font-size: 0.95rem; letter-spacing: 0.1em; color: var(--text); }
+.dev-panel-solved { color: #a8ef40; font-size: 0.8rem; }
 
 /* Zombie leaderboard */
 .zombie-lb-sub {
@@ -1583,6 +1697,16 @@ code {
 .zombie-horde-grid[data-count="6"] .zombie-board .tile { width: 30px; height: 30px; font-size: 1rem; }
 .zombie-horde-grid[data-count="7"] .zombie-board .tile,
 .zombie-horde-grid[data-count="8"] .zombie-board .tile { width: 26px; height: 26px; font-size: 0.85rem; }
+
+/* Smaller tiles for 6- and 7-letter words */
+.zombie-horde-grid[data-wordlen="6"] .zombie-board .tile { width: 44px; height: 44px; font-size: 1.5rem; }
+.zombie-horde-grid[data-wordlen="7"] .zombie-board .tile { width: 38px; height: 38px; font-size: 1.25rem; }
+.zombie-horde-grid[data-count="2"][data-wordlen="6"] .zombie-board .tile { width: 38px; height: 38px; font-size: 1.3rem; }
+.zombie-horde-grid[data-count="2"][data-wordlen="7"] .zombie-board .tile { width: 33px; height: 33px; font-size: 1.1rem; }
+.zombie-horde-grid[data-count="3"][data-wordlen="6"] .zombie-board .tile,
+.zombie-horde-grid[data-count="4"][data-wordlen="6"] .zombie-board .tile { width: 30px; height: 30px; font-size: 1rem; }
+.zombie-horde-grid[data-count="3"][data-wordlen="7"] .zombie-board .tile,
+.zombie-horde-grid[data-count="4"][data-wordlen="7"] .zombie-board .tile { width: 26px; height: 26px; font-size: 0.85rem; }
 
 /* Grid columns per board count */
 .zombie-horde-grid[data-count="3"] { display: grid; grid-template-columns: repeat(3, auto); }
