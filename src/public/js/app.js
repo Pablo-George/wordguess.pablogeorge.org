@@ -555,6 +555,7 @@
         (p.user_id === createdBy ? '<span class="badge">Host</span>' : '') +
         '</div>';
     }).join('');
+    if (window.onLobbyPlayersUpdate) window.onLobbyPlayersUpdate(players, createdBy);
   }
 
   // ── POKEMON REAL-TIME HELPERS ─────────────────────────────────

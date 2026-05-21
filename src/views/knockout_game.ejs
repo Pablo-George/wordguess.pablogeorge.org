@@ -25,18 +25,34 @@
           <button type="submit" class="btn btn-primary">Join Game</button>
         </form>
       <% } else if (user.id === game.created_by) { %>
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+        <div id="lobby-controls" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
           <% if (players.length >= 2) { %>
-            <form action="/games/knockout/<%= game.id %>/start" method="POST">
+            <form id="ko-start-form" action="/games/knockout/<%= game.id %>/start" method="POST">
               <button type="submit" class="btn btn-primary">Start Game</button>
             </form>
           <% } else { %>
-            <p class="text-sm" style="color:var(--text-dim)">Need at least 2 players to start.</p>
+            <p id="ko-need-more" class="text-sm" style="color:var(--text-dim)">Need at least 2 players to start.</p>
           <% } %>
           <form action="/games/knockout/<%= game.id %>/cancel" method="POST">
             <button type="submit" class="btn btn-danger">Close Lobby</button>
           </form>
         </div>
+        <script>
+        window.onLobbyPlayersUpdate = function(players) {
+          if (players.length < 2) return;
+          var needMore = document.getElementById('ko-need-more');
+          if (needMore) needMore.style.display = 'none';
+          if (!document.getElementById('ko-start-form')) {
+            var f = document.createElement('form');
+            f.id = 'ko-start-form';
+            f.action = '/games/knockout/<%= game.id %>/start';
+            f.method = 'POST';
+            f.innerHTML = '<button type="submit" class="btn btn-primary">Start Game</button>';
+            var controls = document.getElementById('lobby-controls');
+            if (controls) controls.insertBefore(f, controls.firstChild);
+          }
+        };
+        </script>
       <% } else { %>
         <p class="text-sm">Waiting for the host to start...</p>
       <% } %>
