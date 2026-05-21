@@ -134,11 +134,15 @@ router.get('/games/animequotes/:id', ensureAuth, (req, res) => {
 router.post('/games/animequotes/:id/join', ensureAuth, (req, res) => {
   const db = getDb();
   const game = db.prepare('SELECT * FROM animequote_games WHERE id = ?').get(req.params.id);
-  if (!game || game.status !== 'waiting') return res.redirect('/games');
+  if (!game || game.status === 'completed') return res.redirect('/games');
   db.prepare('INSERT OR IGNORE INTO animequote_players (game_id, user_id) VALUES (?, ?)').run(game.id, req.user.id);
-  const players = db.prepare('SELECT aqp.user_id, u.display_name, u.avatar_url FROM animequote_players aqp JOIN users u ON u.id = aqp.user_id WHERE aqp.game_id = ? ORDER BY aqp.joined_at ASC').all(game.id);
-  broadcast('lobby', 'animequotes:' + game.id, { players, created_by: game.created_by });
-  broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
+  if (game.status === 'waiting') {
+    const players = db.prepare('SELECT aqp.user_id, u.display_name, u.avatar_url FROM animequote_players aqp JOIN users u ON u.id = aqp.user_id WHERE aqp.game_id = ? ORDER BY aqp.joined_at ASC').all(game.id);
+    broadcast('lobby', 'animequotes:' + game.id, { players, created_by: game.created_by });
+    broadcast('lobby-updates', 'global', { type: 'lobby-changed' });
+  } else {
+    broadcast('animequotes', game.id, animequoteGameState(db, game.id));
+  }
   res.redirect('/games/animequotes/' + game.id);
 });
 

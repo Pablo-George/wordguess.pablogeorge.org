@@ -64,6 +64,15 @@
   <%# ── ACTIVE / COMPLETED ────────────────────────── %>
   <% } else { %>
 
+    <% if (!myPlayer && game.status === 'active') { %>
+      <div style="text-align:center;margin:1.5rem 0;padding:1rem;border:1px solid var(--border);border-radius:4px">
+        <p class="text-sm" style="margin-bottom:0.75rem">You're spectating — join to guess along!</p>
+        <form action="/games/animequotes/<%= game.id %>/join" method="POST">
+          <button type="submit" class="btn btn-primary">Join Game</button>
+        </form>
+      </div>
+    <% } %>
+
     <%# Progress bar %>
     <div class="aq-progress">
       <span class="text-sm"><%= totalSolved %>/<%= totalGuessable %> words solved</span>
@@ -135,7 +144,7 @@
           <% } %>
         </div>
 
-        <% if (!activeWord.solved && !activeWord.revealed && activeGuesses.length < maxGuesses) { %>
+        <% if (myPlayer && !activeWord.solved && !activeWord.revealed && activeGuesses.length < maxGuesses) { %>
           <form id="aq-guess-form" style="margin:0" data-word-id="<%= activeWord.id %>" data-game-id="<%= game.id %>">
             <input type="text" id="aq-guess-input" maxlength="<%= activeWord.word_length %>"
               autocomplete="off" spellcheck="false" inputmode="none" style="display:none">
@@ -294,7 +303,26 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() { window.location.reload(); }, 1200);
       }
     }
+
+    // Refresh player list when someone joins mid-game
+    if (data.players) updatePlayersList(data.players);
   });
+
+  function updatePlayersList(players) {
+    var list = document.querySelector('.player-status-list');
+    if (!list) return;
+    // Update color map so relay colors stay correct for new joiners
+    players.forEach(function(p) {
+      if (p.color) PLAYER_COLORS_MAP[String(p.user_id)] = p.color;
+    });
+    list.innerHTML = players.map(function(p) {
+      return '<div class="player-status-item">' +
+        '<span class="player-color-dot" style="background:' + (p.color || '#888') + '"></span>' +
+        '<img src="' + (p.avatar_url || '') + '" alt="" class="mini-avatar" onerror="this.style.display=\'none\'">' +
+        '<span style="flex:1">' + p.display_name + '</span>' +
+        '</div>';
+    }).join('');
+  }
 
   // ── CO-OP KEY RELAY ─────────────────────────────────────────
   var kb = document.getElementById('game-keyboard');
