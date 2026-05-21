@@ -184,32 +184,16 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   var GAME_ID        = '<%= game.id %>';
-  var MY_UID         = <%= user.id %>;
-  var ACTIVE_WORD_ID = <%= activeWord ? activeWord.id : 'null' %>;
-  <%
-    var PALETTE = ['#ef4444','#3b82f6','#22c55e','#f59e0b','#a855f7','#ec4899'];
-  %>
-  var COLORS = {
-    <% players.forEach(function(p, i) { %>
-      '<%= p.user_id %>': '<%= PALETTE[i % PALETTE.length] %>',
-    <% }); %>
-  };
-  var NAMES = {
-    <% players.forEach(function(p) { %>
-      '<%= p.user_id %>': '<%= p.display_name.replace(/'/g, "\\'").replace(/</g,'&lt;') %>',
-    <% }); %>
-  };
-  // Ordered list of other player UIDs (determines which board row each gets)
-  var OTHER_PLAYERS = [<% players.forEach(function(p) { if (p.user_id != user.id) { %>'<%= p.user_id %>',<% } }); %>];
+  var MY_UID         = '<%= user.id %>';
+  var ACTIVE_WORD_ID = '<%= activeWord ? activeWord.id : "" %>';
 
   // ── GAME STATE UPDATES ──────────────────────────────────────
   var aqLayout = document.getElementById('quote-layout');
   window.wsJoin('animequotes', GAME_ID, function(data) {
-    if (data.type === 'aq-typing') { handleTyping(data); return; }
-    if (data.type === 'aq-clear') {
-      if (String(data.targetUserId) === String(MY_UID)) {
-        var inp = document.getElementById('aq-guess-input');
-        if (inp) { inp.value = ''; broadcastTyping(''); }
+    if (data.type === 'aq-key') {
+      // Co-op: apply another player's keystroke to our shared input
+      if (String(data.userId) !== MY_UID && String(data.wordId) === ACTIVE_WORD_ID) {
+        applyKey(data.key);
       }
       return;
     }
@@ -227,89 +211,61 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     var totalGuessable = data.words.filter(function(w) { return !w.is_given; }).length;
     var totalSolved    = data.words.filter(function(w) { return w.solved; }).length;
-    var fill  = document.querySelector('.aq-progress-fill');
-    var lbl   = document.querySelector('.aq-progress .text-sm');
+    var fill = document.querySelector('.aq-progress-fill');
+    var lbl  = document.querySelector('.aq-progress .text-sm');
     if (fill) fill.style.width = (totalGuessable > 0 ? Math.round(totalSolved / totalGuessable * 100) : 0) + '%';
     if (lbl)  lbl.textContent  = totalSolved + '/' + totalGuessable + ' words solved';
   });
 
-  // ── TYPING BROADCAST ────────────────────────────────────────
-  function broadcastTyping(value) {
-    if (!ACTIVE_WORD_ID || !window.wsRelay) return;
-    window.wsRelay({ type: 'aq-typing', userId: MY_UID, wordId: ACTIVE_WORD_ID, input: value });
-  }
-
+  // ── CO-OP KEY RELAY ─────────────────────────────────────────
+  // Intercept virtual keyboard clicks and relay the key to all players
   var kb = document.getElementById('game-keyboard');
-  if (kb) kb.addEventListener('click', function() {
-    setTimeout(function() { var v = document.getElementById('aq-guess-input'); if (v) broadcastTyping(v.value); }, 10);
+  if (kb) {
+    kb.addEventListener('click', function(e) {
+      var btn = e.target.closest('.key');
+      if (!btn || !ACTIVE_WORD_ID) return;
+      var txt = btn.textContent.trim();
+      var key = txt === '⌫' ? 'BACKSPACE' : txt;
+      if (key !== 'Enter') relayKey(key);
+    });
+  }
+  // Physical keyboard
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.altKey || e.metaKey || !ACTIVE_WORD_ID) return;
+    var key = e.key.toUpperCase();
+    if (key === 'BACKSPACE' || (key.length === 1 && /[A-Z]/.test(key))) relayKey(key);
   });
-  document.addEventListener('keydown', function() {
-    setTimeout(function() { var v = document.getElementById('aq-guess-input'); if (v) broadcastTyping(v.value); }, 10);
-  });
-  var aqForm = document.getElementById('aq-guess-form');
-  if (aqForm) aqForm.addEventListener('submit', function() { broadcastTyping(''); });
 
-  // ── TYPING IN BOARD TILES ───────────────────────────────────
-  var typingMap = {}; // uid -> { input, timer }
+  function relayKey(key) {
+    if (!window.wsRelay) return;
+    window.wsRelay({ type: 'aq-key', userId: MY_UID, wordId: ACTIVE_WORD_ID, key: key });
+  }
 
-  function handleTyping(data) {
-    var uid = String(data.userId);
-    if (uid === String(MY_UID)) return;
-    if (String(data.wordId) !== String(ACTIVE_WORD_ID)) return;
-
-    if (typingMap[uid] && typingMap[uid].timer) clearTimeout(typingMap[uid].timer);
-
-    if (!data.input) {
-      delete typingMap[uid];
-    } else {
-      typingMap[uid] = {
-        input: data.input.toUpperCase(),
-        timer: setTimeout(function() { delete typingMap[uid]; updatePreviewRows(); }, 4000),
-      };
+  // Apply a relayed key from another player to our local shared input + board
+  function applyKey(key) {
+    var inp = document.getElementById('aq-guess-input');
+    if (!inp) return;
+    var maxLen = parseInt(inp.getAttribute('maxlength'), 10) || 5;
+    if (key === 'BACKSPACE') {
+      inp.value = inp.value.slice(0, -1);
+    } else if (key.length === 1 && /[A-Z]/.test(key) && inp.value.length < maxLen) {
+      inp.value += key;
     }
-    updatePreviewRows();
+    syncActiveRow(inp);
   }
 
-  function updatePreviewRows() {
-    var board = document.getElementById('aq-board');
+  // Mirror what the keyboard IIFE does in syncActiveTiles
+  function syncActiveRow(inp) {
+    var boardId = kb && kb.getAttribute('data-board');
+    var board   = boardId && document.getElementById(boardId);
     if (!board) return;
-    // All empty rows: [0] = local player's active row (keyboard manages it), [1+] = other players
-    var emptyRows = board.querySelectorAll('.row:not([data-filled])');
-
-    // Clear all preview rows
-    for (var i = 1; i < emptyRows.length; i++) clearPreviewRow(emptyRows[i]);
-
-    // Fill in each typing player's row by their position in OTHER_PLAYERS
-    OTHER_PLAYERS.forEach(function(uid, idx) {
-      if (!typingMap[uid]) return;
-      var row = emptyRows[idx + 1];
-      if (!row) return;
-      setPreviewRow(row, typingMap[uid].input, COLORS[uid] || '#888', NAMES[uid] || 'Player');
-    });
-  }
-
-  function clearPreviewRow(row) {
-    row.removeAttribute('data-preview');
-    row.style.removeProperty('--preview-color');
-    row.querySelectorAll('.tile').forEach(function(tile) {
-      tile.className = 'tile tile-empty';
-      tile.textContent = '';
-    });
-  }
-
-  function setPreviewRow(row, text, color, name) {
-    row.setAttribute('data-preview', name);
-    row.style.setProperty('--preview-color', color);
+    var row   = board.querySelector('.row:not([data-filled])');
+    if (!row) return;
     var tiles = row.querySelectorAll('.tile');
-    var letters = text.split('');
+    var val   = inp.value;
     tiles.forEach(function(tile, i) {
-      if (letters[i]) {
-        tile.className = 'tile tile-preview';
-        tile.textContent = letters[i];
-      } else {
-        tile.className = 'tile tile-empty';
-        tile.textContent = '';
-      }
+      tile.textContent = i < val.length ? val[i] : '';
+      tile.className   = i < val.length ? 'tile tile-active' : 'tile tile-empty';
     });
   }
 });
