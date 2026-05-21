@@ -195,6 +195,60 @@ document.addEventListener('DOMContentLoaded', function() {
   // Per-tile color tracking so each player's typed letters show in their color
   window.tileColors = [];
 
+  // ── LOCAL GUESS RESULT (no page reload) ─────────────────────
+  window.onAqGuessSuccess = function(data) {
+    // Fill the active row with feedback tiles
+    var board = document.getElementById('aq-board');
+    if (board) {
+      var activeRow = board.querySelector('.row:not([data-filled])');
+      if (activeRow) {
+        activeRow.setAttribute('data-filled', '1');
+        var tiles = activeRow.querySelectorAll('.tile');
+        data.result.forEach(function(r, i) {
+          if (tiles[i]) {
+            tiles[i].className = 'tile tile-' + r.status;
+            tiles[i].textContent = r.letter;
+            tiles[i].style.removeProperty('--player-color');
+          }
+        });
+      }
+    }
+    // Clear shared input state
+    var inp = document.getElementById('aq-guess-input');
+    if (inp) inp.value = '';
+    window.tileColors = [];
+    if (window.syncKeyboardTiles) window.syncKeyboardTiles();
+    if (window.updateKeyboardColors) window.updateKeyboardColors();
+
+    if (data.gameCompleted) { window.location.reload(); return; }
+
+    if (data.solved || data.revealed) {
+      // Update the quote layout button for this word
+      if (aqLayout) {
+        var wordBtn = aqLayout.querySelector('[data-word-id="' + ACTIVE_WORD_ID + '"]');
+        if (wordBtn) {
+          wordBtn.className = 'aq-word ' + (data.solved ? 'aq-word--solved' : 'aq-word--revealed');
+          wordBtn.textContent = data.word;
+        }
+        var fill = document.querySelector('.aq-progress-fill');
+        var lbl  = document.querySelector('.aq-progress .text-sm');
+        if (fill) fill.style.width = (data.totalGuessable > 0 ? Math.round(data.totalSolved / data.totalGuessable * 100) : 0) + '%';
+        if (lbl)  lbl.textContent  = data.totalSolved + '/' + data.totalGuessable + ' words solved';
+      }
+      // Hide form/keyboard, show result message
+      var form = document.getElementById('aq-guess-form');
+      var kbEl = document.getElementById('game-keyboard');
+      var errEl = document.getElementById('aq-error');
+      if (form) form.style.display = 'none';
+      if (kbEl) kbEl.style.display = 'none';
+      var msg = document.createElement('div');
+      msg.className = data.solved ? 'result-message win' : 'result-message fail';
+      msg.innerHTML = data.solved ? 'Word solved!' : 'Out of guesses — word was <strong>' + data.word + '</strong>';
+      if (errEl) errEl.parentNode.insertBefore(msg, errEl);
+      setTimeout(function() { window.location.reload(); }, 1500);
+    }
+  };
+
   // ── GAME STATE UPDATES ──────────────────────────────────────
   var aqLayout = document.getElementById('quote-layout');
   window.wsJoin('animequotes', GAME_ID, function(data) {

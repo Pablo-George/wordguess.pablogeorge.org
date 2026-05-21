@@ -213,7 +213,10 @@ router.post('/games/animequotes/:id/guess', ensureAuth, async (req, res) => {
   const state = animequoteGameState(db, game.id);
   state.lastGuess = { wordId: word.id, result, userId: req.user.id };
   broadcast('animequotes', game.id, state);
-  res.json({ ok: true });
+  const revealed = !solved && newCount >= MAX_GUESSES;
+  const { c: totalSolved }    = db.prepare('SELECT COUNT(*) as c FROM animequote_words WHERE game_id = ? AND is_given = 0 AND solved = 1').get(game.id);
+  const { c: totalGuessable } = db.prepare('SELECT COUNT(*) as c FROM animequote_words WHERE game_id = ? AND is_given = 0').get(game.id);
+  res.json({ ok: true, result, solved, revealed, word: word.word, gameCompleted: state.status === 'completed', totalSolved, totalGuessable });
 });
 
 function animequoteGameState(db, gameId) {

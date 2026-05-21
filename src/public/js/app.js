@@ -246,6 +246,7 @@
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.error) { rejectGuess('aq-board', document.getElementById('aq-error'), data.error); return; }
+        if (window.onAqGuessSuccess) { window.onAqGuessSuccess(data); return; }
         window.location.reload();
       })
       .catch(function() { rejectGuess('aq-board', document.getElementById('aq-error'), 'Error'); });
