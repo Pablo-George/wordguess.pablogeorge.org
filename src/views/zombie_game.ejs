@@ -11,7 +11,13 @@
       <div class="zombie-history-title">Wave Log</div>
       <% priorRounds.forEach(function(r) { %>
         <div class="zombie-history-round">
-          <div class="zombie-history-wave">Wave <%= r.roundNumber %><% if (r.theme) { %><br><em class="zombie-history-theme"><%= r.theme %></em><% } %></div>
+          <div class="zombie-history-wave">Wave <%= r.roundNumber %></div>
+          <% if (r.theme) { %>
+            <div class="zombie-history-connection">
+              <span class="zombie-history-connection-label">🔗</span>
+              <span class="zombie-history-connection-name"><%= r.theme %></span>
+            </div>
+          <% } %>
           <div class="zombie-history-words">
             <% r.words.forEach(function(w) { %>
               <span class="zombie-history-word"><%= w %></span>
