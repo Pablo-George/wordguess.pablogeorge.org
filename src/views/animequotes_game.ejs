@@ -256,6 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
           window.tileColors[inp.value.length - 1] = MY_COLOR;
         }
+        if (window.syncKeyboardTiles) window.syncKeyboardTiles();
       }
       relayKey(key);
     });
@@ -274,6 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         window.tileColors[inp.value.length - 1] = MY_COLOR;
       }
+      if (window.syncKeyboardTiles) window.syncKeyboardTiles();
     }
     relayKey(key);
   });
