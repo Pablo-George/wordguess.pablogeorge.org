@@ -121,6 +121,19 @@
               </div>
             </div>
 
+            <%# Boss fight toggle %>
+            <div class="zombie-lobby-setting">
+              <form action="/games/zombie/<%= game.id %>/toggle-boss" method="POST" style="margin:0">
+                <button type="submit" class="zombie-toggle<%= game.boss_enabled !== 0 ? ' zombie-toggle-on' : '' %>">
+                  <span class="zombie-toggle-knob"></span>
+                </button>
+              </form>
+              <div>
+                <div class="zombie-lobby-setting-label">Boss Fights</div>
+                <div class="zombie-lobby-setting-desc"><%= game.boss_enabled !== 0 ? 'Every 5th wave is a boss fight with 8-letter words' : 'No boss fights' %></div>
+              </div>
+            </div>
+
             <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1.25rem">
               <form action="/games/zombie/<%= game.id %>/start" method="POST" id="zombie-start-form">
                 <button type="submit" class="btn btn-primary" id="zombie-start-btn">Start Game</button>
@@ -164,6 +177,12 @@
                   <div class="zombie-lobby-setting-label">Word Length: <strong><%= (game.word_escalation || 'off') === 'off' ? 'Fixed 5' : 'Escalates every ' + game.word_escalation + ' waves' %></strong></div>
                 </div>
               </div>
+              <div class="zombie-lobby-setting">
+                <div class="zombie-toggle<%= game.boss_enabled !== 0 ? ' zombie-toggle-on' : '' %>"><span class="zombie-toggle-knob"></span></div>
+                <div>
+                  <div class="zombie-lobby-setting-label">Boss Fights: <strong><%= game.boss_enabled !== 0 ? 'On' : 'Off' %></strong></div>
+                </div>
+              </div>
             </div>
             <p class="text-sm">Waiting for the host to start...</p>
           <% } %>
@@ -181,7 +200,8 @@
         <div class="zombie-shop">
           <div class="zombie-shop-header">
             <div class="zombie-shop-title">🛒 Supply Drop</div>
-            <div class="zombie-shop-subtitle">Wave <%= game.current_round - 1 %> survived — prepare for Wave <%= game.current_round %><% if (nextWordLen && nextWordLen > 5) { %> &nbsp;·&nbsp; <%= nextWordLen %>-letter words incoming<% } %></div>
+            <div class="zombie-shop-subtitle">Wave <%= game.current_round - 1 %> survived — prepare for Wave <%= game.current_round %>
+<% if (game.boss_enabled !== 0 && game.current_round % 5 === 0) { %> &nbsp;·&nbsp; 👑 BOSS FIGHT INCOMING<% } else if (nextWordLen && nextWordLen > 5) { %> &nbsp;·&nbsp; <%= nextWordLen %>-letter words incoming<% } %></div>
             <div class="zombie-shop-coins-row">
               <% if (game.last_coins_earned > 0) { %>
                 <span class="zombie-shop-earned">+<%= game.last_coins_earned %> this wave</span>
@@ -211,7 +231,7 @@
             <% }) %>
           </div>
 
-          <% var PASSIVE_TYPES_ARR = ['extra_guess', 'shield', 'eagle_eye', 'tough', 'scavenger']; %>
+          <% var PASSIVE_TYPES_ARR = ['extra_guess', 'shield', 'eagle_eye', 'tough', 'scavenger', 'bounty', 'coin_hoard']; %>
           <% if (passiveItems && passiveItems.length > 0) { %>
             <div class="zombie-shop-cart">
               <span class="zombie-shop-cart-label">⚡ Passive (every wave):</span>
@@ -295,11 +315,15 @@
         %>
 
         <p class="puzzle-date">
+          <% if (isBossRound) { %><span class="boss-label">👑 BOSS FIGHT</span> &nbsp;·&nbsp;<% } %>
           Wave <%= game.current_round %> &nbsp;·&nbsp;
-          <%= wordCount %> zombie<%= wordCount !== 1 ? 's' : '' %> &nbsp;·&nbsp;
+          <%= wordCount %> <%= isBossRound ? 'boss' : 'zombie' %><%= wordCount !== 1 ? 'es' : '' %> &nbsp;·&nbsp;
           <%= wordLen %>-letter words &nbsp;·&nbsp;
           <%= game.rounds_survived %> wave<%= game.rounds_survived !== 1 ? 's' : '' %> survived
         </p>
+        <% if (isBossRound && theme) { %>
+          <p class="boss-theme">👑 Boss Theme: <strong><%= theme %></strong></p>
+        <% } %>
 
         <%# Passive perks bar %>
         <% if (passiveItems && passiveItems.length > 0) { %>
@@ -340,6 +364,20 @@
               <button class="btn grenade-cancel" style="margin-top:0.75rem">Cancel</button>
             </div>
           </div>
+          <%# Spotlight targeting overlay %>
+          <div id="spotlight-overlay" class="zombie-target-overlay" style="display:none">
+            <div class="zombie-target-modal">
+              <div class="zombie-target-title">🔦 Illuminate Which Zombie?</div>
+              <div class="zombie-target-btns">
+                <% for (var b = 0; b < wordCount; b++) { %>
+                  <% if (solvedMask.indexOf(b) === -1) { %>
+                    <button class="zombie-target-btn" data-target="<%= b %>">Zombie <%= b + 1 %></button>
+                  <% } %>
+                <% } %>
+              </div>
+              <button class="btn spotlight-cancel" style="margin-top:0.75rem">Cancel</button>
+            </div>
+          </div>
         <% } %>
 
         <%# Safe guess indicator %>
@@ -368,9 +406,9 @@
           <% for (var b = 0; b < wordCount; b++) { %>
             <% var beaten = solvedMask.indexOf(b) !== -1; %>
             <% var boardHints = hints.filter(function(h) { return h.wordIndex === b; }); %>
-            <div class="zombie-board-wrap <%= beaten ? 'zombie-beaten' : '' %>" id="zombie-wrap-<%= b %>">
+            <div class="zombie-board-wrap <%= beaten ? 'zombie-beaten' : '' %><%= isBossRound ? ' is-boss-round' : '' %>" id="zombie-wrap-<%= b %>">
               <div class="zombie-label">
-                <% if (beaten) { %>💀 ZOMBIE <%= b + 1 %> SLAIN<% } else { %>🧟 ZOMBIE <%= b + 1 %><% } %>
+                <% if (beaten) { %>💀 <%= isBossRound ? 'BOSS' : 'ZOMBIE' %> <%= b + 1 %> SLAIN<% } else { %><%= isBossRound ? '👑 BOSS' : '🧟 ZOMBIE' %> <%= b + 1 %><% } %>
                 <% boardHints.forEach(function(h) { %>
                   <span class="zombie-hint-badge">P<%= h.tileIndex + 1 %>:<%= h.letter %></span>
                 <% }) %>
@@ -536,6 +574,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  var spotlightOverlay = document.getElementById('spotlight-overlay');
+  if (spotlightOverlay) {
+    spotlightOverlay.querySelectorAll('.zombie-target-btn').forEach(function(tbtn) {
+      tbtn.addEventListener('click', function() {
+        var ti = parseInt(tbtn.getAttribute('data-target'), 10);
+        spotlightOverlay.style.display = 'none';
+        useItem('spotlight', { targetIndex: ti }, null);
+      });
+    });
+  }
+
   document.querySelectorAll('.zombie-bag-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       if (submitting) return;
@@ -553,6 +602,16 @@ document.addEventListener('DOMContentLoaded', function() {
         grenadeOverlay.style.display = 'flex';
         grenadeOverlay.querySelector('.grenade-cancel').onclick = function() {
           grenadeOverlay.style.display = 'none';
+          btn.disabled = false; btn.style.opacity = '';
+        };
+        return;
+      }
+
+      if (itemType === 'spotlight' && spotlightOverlay) {
+        btn.disabled = true; btn.style.opacity = '0.5';
+        spotlightOverlay.style.display = 'flex';
+        spotlightOverlay.querySelector('.spotlight-cancel').onclick = function() {
+          spotlightOverlay.style.display = 'none';
           btn.disabled = false; btn.style.opacity = '';
         };
         return;
