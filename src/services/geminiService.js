@@ -2,17 +2,21 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function generateAnimeQuote(animeName, targetWordCount, retries = 4) {
+async function generateAnimeQuote(animeName, targetWordCount, usedQuotes = [], retries = 4) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
 
+  const avoidSection = usedQuotes.length > 0
+    ? `\nDo NOT use any of these previously used quotes:\n${usedQuotes.map((q, i) => `${i + 1}. "${q}"`).join('\n')}\n`
+    : '';
+
   const prompt = `You are an anime expert with deep knowledge of "${animeName}".
 
 Select a memorable, meaningful line of dialogue from "${animeName}" that is approximately ${targetWordCount} words long.
-
+${avoidSection}
 Return ONLY a valid JSON object — no markdown, no code blocks, nothing else:
 {
   "quote": "the line of dialogue in English",

@@ -157,8 +157,12 @@ router.post('/games/animequotes/:id/start', ensureAuth, async (req, res) => {
   const { c: playerCount } = db.prepare('SELECT COUNT(*) as c FROM animequote_players WHERE game_id = ?').get(game.id);
   const wordTarget = targetWordCount(playerCount);
 
+  const usedQuotes = db.prepare(
+    "SELECT quote_raw FROM animequote_games WHERE anime_name = ? AND quote_raw IS NOT NULL AND id != ?"
+  ).all(game.anime_name, game.id).map(r => r.quote_raw);
+
   try {
-    const { quote, character, episode, timestamp } = await generateAnimeQuote(game.anime_name, wordTarget);
+    const { quote, character, episode, timestamp } = await generateAnimeQuote(game.anime_name, wordTarget, usedQuotes);
     const words = processQuote(quote);
 
     db.prepare('UPDATE animequote_games SET quote_raw = ?, status = ?, character_name = ?, episode = ?, quote_timestamp = ? WHERE id = ?')
